@@ -1,0 +1,14 @@
+version: "2"
+sql:
+  - name: comprobante
+    engine: postgresql
+    queries: "internal/features/comprobante/infra/postgres/queries/"
+    schema: "sql/migrations/"
+    gen:
+      go:
+        package: comprobantedb
+        out: "internal/features/comprobante/infra/postgres/comprobantedb"
+        sql_package: pgx/v5
+        emit_json_tags: false
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true

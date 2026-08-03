@@ -1,0 +1,19 @@
+{
+    "name": "tacu/facturacion-engine",
+    "description": "Motor de firma y envio de comprobantes electronicos SUNAT",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "greenter/greenter": "^5.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Engine\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

@@ -1,0 +1,52 @@
+name: facturacion
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: facturacion
+      POSTGRES_PASSWORD: facturacion
+      POSTGRES_DB: facturacion
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U facturacion"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  engine:
+    build: ./engine
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://127.0.0.1:8000/health') ? 0 : 1);\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgres://facturacion:facturacion@postgres:5432/facturacion?sslmode=disable
+      ENGINE_URL: http://engine:8000
+      APP_ENV: development
+      LOG_FORMAT: console
+      # SUNAT beta tarda ~60s en responder la consulta de ticket antes de
+      # rendirse. El cliente debe esperar mas que eso para recibir el
+      # "pendiente" y reprogramar, en vez de cortar por timeout.
+      ENGINE_TIMEOUT: 90s
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  pgdata:

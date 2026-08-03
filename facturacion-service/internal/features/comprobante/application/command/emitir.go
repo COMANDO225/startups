@@ -1,0 +1,171 @@
+package command
+
+import (
+	"context"
+	"encoding/json"
+	"time"
+
+	"facturacion-service/internal/features/comprobante/domain"
+	"facturacion-service/internal/shared/transaction"
+	"facturacion-service/pkg/pgxerr"
+	"facturacion-service/pkg/ulid"
+)
+
+type EmitirCmd struct {
+	TenantID       string
+	IdempotencyKey string
+	TipoDoc        string
+	Serie          string
+	Payload        json.RawMessage
+	Moneda         string
+	ImporteTotal   string
+	FechaEmision   time.Time
+}
+
+type Emitir struct {
+	repo domain.Repositorio
+	cola domain.Encolador
+	tx   transaction.Transactor
+}
+
+func NewEmitir(repo domain.Repositorio, cola domain.Encolador, tx transaction.Transactor) *Emitir {
+	return &Emitir{repo: repo, cola: cola, tx: tx}
+}
+
+func (uc *Emitir) Execute(ctx context.Context, cmd EmitirCmd) (*domain.Comprobante, error) {
+	tipoDoc := domain.TipoDoc(cmd.TipoDoc)
+
+	// Todo lo que se pueda rechazar se rechaza antes de tocar el contador:
+	// un correlativo consumido por un documento invalido deja un hueco en la
+	// numeracion que SUNAT despues observa.
+	if err := validar(tipoDoc, cmd); err != nil {
+		return nil, err
+	}
+
+	// Un reintento del cliente devuelve el mismo comprobante en vez de quemar
+	// otro correlativo.
+	if existente, err := uc.repo.PorIdempotencyKey(ctx, cmd.TenantID, cmd.IdempotencyKey); err == nil && existente != nil {
+		return existente, nil
+	}
+
+	var creado *domain.Comprobante
+
+	err := uc.tx.RunInTx(ctx, func(ctx context.Context) error {
+		correlativo, err := uc.repo.SiguienteCorrelativo(ctx, cmd.TenantID, tipoDoc, cmd.Serie)
+		if err != nil {
+			return err
+		}
+
+		c := domain.New(domain.NuevoComprobante{
+			ID:             string(ulid.New()),
+			TenantID:       cmd.TenantID,
+			IdempotencyKey: cmd.IdempotencyKey,
+			TipoDoc:        tipoDoc,
+			Serie:          cmd.Serie,
+			Correlativo:    correlativo,
+			Payload:        cmd.Payload,
+			Moneda:         cmd.Moneda,
+			ImporteTotal:   cmd.ImporteTotal,
+			FechaEmision:   cmd.FechaEmision,
+		})
+
+		if err := uc.repo.Crear(ctx, c); err != nil {
+			return err
+		}
+
+		// Encolar dentro de la transaccion: si el commit falla, el job no existe.
+		if err := uc.cola.EncolarEmision(ctx, c.ID()); err != nil {
+			return err
+		}
+
+		creado = c
+		return nil
+	})
+
+	if err != nil {
+		// Dos requests con la misma clave en paralelo: ambos pasan el chequeo
+		// inicial y uno choca contra uq_comprobantes_idempotency. El perdedor
+		// hace rollback (devolviendo el correlativo) y recupera el ganador, que
+		// es lo que el cliente esperaba desde el principio.
+		if pgxerr.IsUniqueViolation(err) {
+			if existente, e := uc.repo.PorIdempotencyKey(ctx, cmd.TenantID, cmd.IdempotencyKey); e == nil && existente != nil {
+				return existente, nil
+			}
+		}
+		return nil, err
+	}
+
+	return creado, nil
+}
+
+func validar(tipoDoc domain.TipoDoc, cmd EmitirCmd) error {
+	if !tipoDoc.Valido() {
+		return domain.ErrTipoDocInvalido(cmd.TipoDoc)
+	}
+
+	if !tipoDoc.PrefijoSerieValido(cmd.Serie) {
+		return domain.ErrSerieIncoherente(cmd.Serie, cmd.TipoDoc)
+	}
+
+	if cmd.FechaEmision.After(time.Now().Add(24 * time.Hour)) {
+		return domain.ErrFechaFutura()
+	}
+
+	// El importe que se guarda debe ser el mismo que viaja a SUNAT: si difieren,
+	// el registro interno contradice al documento legal.
+	if err := verificarImporte(cmd.Payload, cmd.ImporteTotal); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func verificarImporte(payload json.RawMessage, declarado string) error {
+	var doc struct {
+		Totales struct {
+			ImporteTotal *json.Number `json:"importe_total"`
+		} `json:"totales"`
+	}
+
+	if err := json.Unmarshal(payload, &doc); err != nil {
+		return domain.ErrPayloadInvalido(err.Error())
+	}
+
+	if doc.Totales.ImporteTotal == nil {
+		return domain.ErrPayloadInvalido("falta totales.importe_total")
+	}
+
+	if !mismoImporte(doc.Totales.ImporteTotal.String(), declarado) {
+		return domain.ErrImporteIncoherente(declarado, doc.Totales.ImporteTotal.String())
+	}
+
+	return nil
+}
+
+// Compara montos como decimales para que "118" y "118.00" cuenten como iguales.
+func mismoImporte(a, b string) bool {
+	return normalizar(a) == normalizar(b)
+}
+
+func normalizar(s string) string {
+	if i := indexByte(s, '.'); i >= 0 {
+		entero, decimal := s[:i], s[i+1:]
+		for len(decimal) > 0 && decimal[len(decimal)-1] == '0' {
+			decimal = decimal[:len(decimal)-1]
+		}
+		if decimal == "" {
+			return entero
+		}
+		return entero + "." + decimal
+	}
+	return s
+}
+
+func indexByte(s string, b byte) int {
+	for i := 0; i < len(s); i++ {
+		if s[i] == b {
+			return i
+		}
+	}
+	return -1
+}

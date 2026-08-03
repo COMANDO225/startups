@@ -1,0 +1,25 @@
+# Certificados y claves privadas: NUNCA versionar
+*.pem
+*.pfx
+*.p12
+*.key
+engine/certs/
+
+# Dependencias y artefactos
+vendor/
+node_modules/
+bin/
+**/engine/out/
+engine/composer.lock
+
+# Entorno
+.env
+*.env
+!.env.example
+
+# Temporales
+tmp/
+*.log
+
+# Repo de FynoTech-Team, tiene su propio remoto
+pichangealo-backend/

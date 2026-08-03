@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS "comprobantes";
+DROP TABLE IF EXISTS "series";
+DROP TABLE IF EXISTS "tenants";

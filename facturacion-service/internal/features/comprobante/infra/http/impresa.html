@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>{{.Titulo}} {{.Comprobante.Numero}}</title>
+<style>
+  :root { --linea: #000; }
+  * { box-sizing: border-box; }
+  body {
+    font: 12px/1.45 "Helvetica Neue", Arial, sans-serif;
+    color: #000; background: #fff;
+    max-width: 21cm; margin: 0 auto; padding: 1.5cm;
+  }
+  header { display: flex; justify-content: space-between; gap: 1.5rem; align-items: flex-start; }
+  .emisor h1 { font-size: 15px; margin: 0 0 .3rem; text-transform: uppercase; }
+  .emisor p { margin: 0; }
+  .titulo {
+    border: 1.5px solid var(--linea); border-radius: 4px;
+    padding: .6rem 1rem; text-align: center; min-width: 6.5cm;
+  }
+  .titulo strong { display: block; font-size: 13px; }
+  .titulo .ruc { font-size: 12px; margin-bottom: .25rem; }
+  .titulo .numero { font-size: 16px; margin-top: .3rem; letter-spacing: .5px; }
+
+  .receptor { margin: 1.2rem 0; border-top: 1px solid var(--linea); border-bottom: 1px solid var(--linea); padding: .6rem 0; }
+  .receptor div { display: flex; gap: .5rem; }
+  .receptor dt { font-weight: 700; min-width: 5.5cm; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+  th, td { padding: .35rem .4rem; text-align: left; border-bottom: 1px solid #999; }
+  th { border-bottom: 1.5px solid var(--linea); text-transform: uppercase; font-size: 11px; }
+  .num { text-align: right; white-space: nowrap; }
+
+  .cierre { display: flex; justify-content: space-between; gap: 1.5rem; margin-top: 1rem; align-items: flex-start; }
+  .letras { flex: 1; }
+  .totales { min-width: 6cm; }
+  .totales tr td { border: none; padding: .2rem .4rem; }
+  .totales tr:last-child td { border-top: 1.5px solid var(--linea); font-weight: 700; font-size: 13px; }
+
+  /* SUNAT: el QR va al pie, en negro, con un maximo de 2cm de alto por 6cm de
+     ancho y una zona de silencio de al menos 1mm. */
+  .pie { margin-top: 1.5rem; border-top: 1px solid var(--linea); padding-top: .8rem;
+         display: flex; gap: 1rem; align-items: flex-end; }
+  .pie img { width: 2cm; height: 2cm; padding: 1mm; background: #fff; }
+  .pie .leyenda { font-size: 10px; line-height: 1.5; }
+  .hash { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 9px; word-break: break-all; }
+
+  @media print {
+    body { padding: 0; max-width: none; }
+    @page { margin: 1.2cm; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="emisor">
+    <h1>{{with .Emisor.NombreComercial}}{{.}}{{else}}{{$.Emisor.RazonSocial}}{{end}}</h1>
+    <p>{{.Emisor.RazonSocial}}</p>
+    <p>{{.Emisor.Direccion}}</p>
+    <p>{{.Emisor.Distrito}} - {{.Emisor.Provincia}} - {{.Emisor.Departamento}}</p>
+  </div>
+  <div class="titulo">
+    <div class="ruc">RUC {{.Emisor.RUC}}</div>
+    <strong>{{.Titulo}}</strong>
+    <div class="numero">{{.Comprobante.Numero}}</div>
+  </div>
+</header>
+
+<dl class="receptor">
+  <div><dt>Señor(es)</dt><dd>{{.Doc.Receptor.RazonSocial}}</dd></div>
+  <div><dt>Documento</dt><dd>{{.Doc.Receptor.NumDoc}}</dd></div>
+  {{with .Doc.Receptor.Direccion}}<div><dt>Dirección</dt><dd>{{.}}</dd></div>{{end}}
+  <div><dt>Fecha de emisión</dt><dd>{{.Comprobante.FechaEmision.Format "02/01/2006"}}</dd></div>
+  <div><dt>Moneda</dt><dd>{{.Comprobante.Moneda}}</dd></div>
+</dl>
+
+<table>
+  <thead>
+    <tr>
+      <th>Código</th><th>Descripción</th><th>Unidad</th>
+      <th class="num">Cantidad</th><th class="num">P. unitario</th><th class="num">Importe</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .Doc.Items}}
+    <tr>
+      <td>{{.Codigo}}</td>
+      <td>{{.Descripcion}}</td>
+      <td>{{with .Unidad}}{{.}}{{else}}NIU{{end}}</td>
+      <td class="num">{{.Cantidad}}</td>
+      <td class="num">{{.PrecioUnitario}}</td>
+      <td class="num">{{.ValorVenta}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+
+<div class="cierre">
+  <p class="letras"><strong>SON:</strong> {{.Doc.MontoLetras}}</p>
+  <table class="totales">
+    <tr><td>Op. gravadas</td><td class="num">{{.Comprobante.Moneda}} {{.Doc.Totales.OperGravadas}}</td></tr>
+    <tr><td>IGV (18%)</td><td class="num">{{.Comprobante.Moneda}} {{.Doc.Totales.IGV}}</td></tr>
+    <tr><td>Importe total</td><td class="num">{{.Comprobante.Moneda}} {{.Comprobante.ImporteTotal}}</td></tr>
+  </table>
+</div>
+
+<footer class="pie">
+  <img src="{{.QRDataURI}}" alt="Código QR del comprobante">
+  <div class="leyenda">
+    <p>Representación impresa de la {{.Titulo}}.</p>
+    <p>Consulte su documento en <strong>www.sunat.gob.pe</strong></p>
+    <p class="hash">{{.CadenaQR}}</p>
+  </div>
+</footer>
+
+</body>
+</html>

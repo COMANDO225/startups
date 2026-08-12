@@ -18,15 +18,41 @@ func TestClasificarCodigo(t *testing.T) {
 		{"1001", EstadoRechazado, "1xxx rechaza"},
 		{"1033", EstadoDuplicado, "ya registrado previamente"},
 		{"2109", EstadoDuplicado, "ya registrado previamente"},
-		{"", EstadoRechazado, "codigo vacio no puede darse por bueno"},
-		{"desconocido", EstadoRechazado, "ante la duda, rechazado"},
 		{"99999", EstadoRechazado, "codigo fuera de rango conocido"},
+
+		// Greenter deja el codigo crudo cuando no encuentra digitos en el
+		// SoapFault: eso significa que SUNAT nunca dictamino el documento.
+		{"HTTP", EstadoError, "un 401 es transporte, no rechazo (visto en produccion)"},
+		{"SOAP-ENV:Server", EstadoError, "fallo del servidor, reintentable"},
+		{"", EstadoError, "sin codigo no sabemos que dijo SUNAT"},
+		{"desconocido", EstadoError, "no es un codigo de SUNAT"},
 	}
 
 	for _, c := range casos {
 		if got := ClasificarCodigo(c.codigo); got != c.esperado {
 			t.Errorf("ClasificarCodigo(%q) = %q, esperaba %q (%s)", c.codigo, got, c.esperado, c.porque)
 		}
+	}
+}
+
+// El bug que motivo la separacion: bajo carga, SUNAT devolvio 401 y el
+// comprobante quedaba rechazado, terminal, con el correlativo quemado. Un fallo
+// de red no puede tener ese efecto.
+func TestFalloDeTransporteDejaElComprobanteRetomable(t *testing.T) {
+	c := New(NuevoComprobante{ID: "1", TipoDoc: TipoFactura, Serie: "F001", Correlativo: 1})
+
+	c.Resolver("HTTP", "Unauthorized", nil, nil)
+
+	if c.Estado().EsFinal() {
+		t.Fatalf("estado %q es final: un fallo de red mataria el comprobante", c.Estado())
+	}
+
+	tomables := map[string]bool{}
+	for _, e := range EstadosTomables() {
+		tomables[e] = true
+	}
+	if !tomables[string(c.Estado())] {
+		t.Fatalf("estado %q no es tomable: nadie reintentaria el envio", c.Estado())
 	}
 }
 

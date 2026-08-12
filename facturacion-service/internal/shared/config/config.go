@@ -15,6 +15,8 @@ type Config struct {
 	Logger   Logger
 	Crypto   Crypto
 	Webhook  Webhook
+	Metrics  Metrics
+	Admin    Admin
 }
 
 type Webhook struct {
@@ -48,11 +50,28 @@ type Database struct {
 type Engine struct {
 	URL     string
 	Timeout time.Duration
+
+	// MaxPorEmisor: envios simultaneos permitidos hacia SUNAT por RUC. SUNAT no
+	// publica su limite, asi que el default es el valor seguro (serializar) y
+	// queda como perilla para subirlo cuando se mida el real.
+	MaxPorEmisor int
 }
 
 type Logger struct {
 	Level  string
 	Format string
+}
+
+// Metrics protege /metrics. Sin token queda abierto, lo que sirve en desarrollo;
+// en produccion el volumen de comprobantes es informacion del negocio.
+type Metrics struct {
+	Token string
+}
+
+// Admin protege el alta de emisores, que registra certificados y Claves SOL de
+// terceros. Sin token, el alta queda deshabilitada.
+type Admin struct {
+	Token string
 }
 
 // MasterKey cifra los certificados digitales de cada tenant en reposo (AES-256-GCM).
@@ -96,8 +115,9 @@ func Load() (*Config, error) {
 			MaxIdleTime: envDuration("DATABASE_MAX_IDLE_TIME", 30*time.Minute),
 		},
 		Engine: Engine{
-			URL:     env("ENGINE_URL", "http://engine:8000"),
-			Timeout: envDuration("ENGINE_TIMEOUT", 60*time.Second),
+			URL:          env("ENGINE_URL", "http://engine:8000"),
+			Timeout:      envDuration("ENGINE_TIMEOUT", 60*time.Second),
+			MaxPorEmisor: envInt("ENGINE_MAX_POR_EMISOR", 1),
 		},
 		Logger: Logger{
 			Level:  env("LOG_LEVEL", "info"),
@@ -108,6 +128,12 @@ func Load() (*Config, error) {
 		},
 		Webhook: Webhook{
 			Timeout: envDuration("WEBHOOK_TIMEOUT", 10*time.Second),
+		},
+		Metrics: Metrics{
+			Token: env("METRICS_TOKEN", ""),
+		},
+		Admin: Admin{
+			Token: env("ADMIN_TOKEN", ""),
 		},
 	}
 

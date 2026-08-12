@@ -206,3 +206,36 @@ func (r *Repo) Actualizar(ctx context.Context, c *domain.Comprobante) error {
 		MensajeSunat: ptr(c.MensajeSunat()),
 	})
 }
+
+// Salud resume el estado del pipeline para las metricas y la alerta. Es una
+// consulta agregada sobre toda la tabla, no por emisor: lo que interesa saber es
+// si el servicio en conjunto esta avanzando.
+func (r *Repo) Salud(ctx context.Context) (domain.SaludPipeline, error) {
+	q := r.q(ctx)
+
+	filas, err := q.ContarPorEstado(ctx)
+	if err != nil {
+		return domain.SaludPipeline{}, err
+	}
+
+	porEstado := make(map[domain.Estado]int64, len(filas))
+	for _, f := range filas {
+		porEstado[domain.Estado(f.Estado)] = f.Total
+	}
+
+	atencion, err := q.ContarRequierenAtencion(ctx, domain.MaxIntentos)
+	if err != nil {
+		return domain.SaludPipeline{}, err
+	}
+
+	antiguedad, err := q.AntiguedadDelMasViejoSinResolver(ctx)
+	if err != nil {
+		return domain.SaludPipeline{}, err
+	}
+
+	return domain.SaludPipeline{
+		PorEstado:          porEstado,
+		RequierenAtencion:  atencion,
+		AntiguedadMasViejo: time.Duration(antiguedad) * time.Second,
+	}, nil
+}

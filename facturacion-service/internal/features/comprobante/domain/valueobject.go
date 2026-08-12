@@ -21,6 +21,16 @@ const (
 	EstadoError            Estado = "error"
 )
 
+// TodosLosEstados alimenta las metricas. Se emiten todos, incluso en cero: un
+// estado que aparece y desaparece entre scrapes deja huecos en las graficas.
+func TodosLosEstados() []Estado {
+	return []Estado{
+		EstadoPendiente, EstadoProcesando, EstadoPendienteResumen, EstadoEnviado,
+		EstadoTicketPendiente, EstadoAceptado, EstadoObservado, EstadoRechazado,
+		EstadoDuplicado, EstadoAnulado, EstadoError,
+	}
+}
+
 // EsFinal indica que SUNAT ya resolvio el comprobante y no debe reprocesarse.
 func (e Estado) EsFinal() bool {
 	switch e {
@@ -123,15 +133,24 @@ var codigosYaRegistrado = map[string]bool{
 
 // ClasificarCodigo mapea el ResponseCode del CDR a un estado.
 //
-//	0     aceptado
-//	4xxx  observado (aceptado con advertencias)
-//	resto rechazado
+//	no numerico  error (fallo de transporte, reintentable)
+//	0            aceptado
+//	4xxx         observado (aceptado con advertencias)
+//	resto        rechazado
 //
 // El default es rechazado a proposito: ante un codigo desconocido es mucho peor
 // dar por bueno un comprobante que SUNAT no acepto, que marcar como rechazado
 // uno que si paso.
+//
+// Pero un codigo no numerico no viene de SUNAT. Greenter extrae los digitos del
+// SoapFault (preg_replace '/[^0-9]+/') y solo devuelve el codigo crudo cuando no
+// encontro ninguno: "HTTP" en un 401, "SOAP-ENV:Server" en una caida. Eso es un
+// fallo de transporte, no un rechazo del documento. Clasificarlo como rechazado
+// mataba el comprobante y quemaba el correlativo por un problema de red.
 func ClasificarCodigo(codigo string) Estado {
 	switch {
+	case !soloDigitos(codigo):
+		return EstadoError
 	case codigo == "0":
 		return EstadoAceptado
 	case codigosYaRegistrado[codigo]:
@@ -141,4 +160,10 @@ func ClasificarCodigo(codigo string) Estado {
 	default:
 		return EstadoRechazado
 	}
+}
+
+// El vacio cuenta como no numerico: si el motor no devolvio codigo, no sabemos
+// que dijo SUNAT y reintentar es mas seguro que dar por muerto el comprobante.
+func soloDigitos(s string) bool {
+	return s != "" && strings.TrimLeft(s, "0123456789") == ""
 }

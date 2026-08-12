@@ -19,6 +19,10 @@ const (
 	antiguedadWebhook = 30 * time.Minute
 
 	limiteRescate = 200
+
+	// Pasada esta espera, el pipeline dejo de avanzar: ni SUNAT ni los
+	// reintentos tardan tanto en condiciones normales.
+	antiguedadAlarmante = time.Hour
 )
 
 type RescatarArgs struct{}
@@ -36,7 +40,14 @@ type RescatarWorker struct {
 	repo    domain.Repositorio
 	resumen domain.ResumenRepositorio
 	cola    ColaRescate
+	monitor MonitorSalud
 	log     Logger
+}
+
+// MonitorSalud es lo unico que el barredor necesita para saber si el pipeline
+// avanza. Va aparte de domain.Repositorio para no cargar a cada implementacion.
+type MonitorSalud interface {
+	Salud(ctx context.Context) (domain.SaludPipeline, error)
 }
 
 // ColaRescate junta todo lo que el barredor necesita reencolar.
@@ -52,8 +63,8 @@ type Logger interface {
 	Errorw(msg string, keysAndValues ...any)
 }
 
-func NewRescatarWorker(repo domain.Repositorio, resumen domain.ResumenRepositorio, cola ColaRescate, log Logger) *RescatarWorker {
-	return &RescatarWorker{repo: repo, resumen: resumen, cola: cola, log: log}
+func NewRescatarWorker(repo domain.Repositorio, resumen domain.ResumenRepositorio, cola ColaRescate, monitor MonitorSalud, log Logger) *RescatarWorker {
+	return &RescatarWorker{repo: repo, resumen: resumen, cola: cola, monitor: monitor, log: log}
 }
 
 func (w *RescatarWorker) Work(ctx context.Context, _ *river.Job[RescatarArgs]) error {
@@ -67,7 +78,30 @@ func (w *RescatarWorker) Work(ctx context.Context, _ *river.Job[RescatarArgs]) e
 			"comprobantes", comprobantes, "resumenes", resumenes, "webhooks", webhooks)
 	}
 
+	w.avisarSiHayAtascados(ctx)
 	return nil
+}
+
+// El listado de /atencion existia y nadie lo miraba. Un comprobante que ningun
+// reintento arregla es dinero que no se facturo, asi que tiene que gritar.
+func (w *RescatarWorker) avisarSiHayAtascados(ctx context.Context) {
+	salud, err := w.monitor.Salud(ctx)
+	if err != nil {
+		w.log.Errorw("no se pudo medir la salud del pipeline", "error", err)
+		return
+	}
+
+	if salud.RequierenAtencion > 0 {
+		w.log.Errorw("hay comprobantes que requieren intervencion humana",
+			"cantidad", salud.RequierenAtencion,
+			"revisar", "GET /v1/comprobantes/atencion")
+	}
+
+	if salud.AntiguedadMasViejo > antiguedadAlarmante {
+		w.log.Errorw("hay comprobantes sin resolver desde hace demasiado",
+			"antiguedad", salud.AntiguedadMasViejo.String(),
+			"umbral", antiguedadAlarmante.String())
+	}
 }
 
 func (w *RescatarWorker) rescatarComprobantes(ctx context.Context) int {

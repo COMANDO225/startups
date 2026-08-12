@@ -16,14 +16,16 @@ import (
 )
 
 type comprobanteDeps struct {
-	controller *comprobantehttp.Controller
-	tenants    domain.TenantRepositorio
+	controller  *comprobantehttp.Controller
+	tenants     domain.TenantRepositorio
+	monitor     comprobantehttp.MonitorSalud
+	crearEmisor *command.CrearEmisor
 }
 
 func (a *App) wireComprobante(cipher *crypto.Cipher, workers *river.Workers) *comprobanteDeps {
 	repo := postgres.NewRepo(a.DB.Pool)
 	tenants := postgres.NewTenantRepo(a.DB.Pool, cipher)
-	motor := engineclient.NewClient(a.Config.Engine.URL, a.Config.Engine.Timeout)
+	motor := engineclient.NewClient(a.Config.Engine.URL, a.Config.Engine.Timeout, a.Config.Engine.MaxPorEmisor)
 	cola := worker.NewEncolador(a.River)
 	tx := transaction.NewTransactor(a.DB.Pool)
 
@@ -40,7 +42,7 @@ func (a *App) wireComprobante(cipher *crypto.Cipher, workers *river.Workers) *co
 	notificar := command.NewNotificar(repo, tenants, sender)
 
 	river.AddWorker(workers, worker.NewEmitirWorker(procesar))
-	river.AddWorker(workers, worker.NewRescatarWorker(repo, repo, cola, a.Log))
+	river.AddWorker(workers, worker.NewRescatarWorker(repo, repo, cola, repo, a.Log))
 	river.AddWorker(workers, worker.NewResumenDiarioWorker(repo, armar, a.Log))
 	river.AddWorker(workers, worker.NewEnviarResumenWorker(enviarResumen, repo, cola))
 	river.AddWorker(workers, worker.NewConsultarTicketWorker(consultar))
@@ -54,6 +56,8 @@ func (a *App) wireComprobante(cipher *crypto.Cipher, workers *river.Workers) *co
 			query.NewListar(repo),
 			query.NewRequierenAtencion(repo),
 		),
-		tenants: tenants,
+		tenants:     tenants,
+		monitor:     repo,
+		crearEmisor: command.NewCrearEmisor(tenants, tx),
 	}
 }

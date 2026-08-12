@@ -59,6 +59,13 @@ func (uc *Procesar) Execute(ctx context.Context, comprobanteID string) error {
 		return err
 	}
 
+	// SUNAT no llego a pronunciarse sobre el documento. El comprobante quedo
+	// retomable; devolver error hace que River reintente con backoff en vez de
+	// cerrar el job y dejarlo esperando al barrido.
+	if c.Estado() == domain.EstadoError {
+		return domain.ErrMotor(res.Codigo + ": " + res.Mensaje)
+	}
+
 	return uc.avisar(ctx, c)
 }
 

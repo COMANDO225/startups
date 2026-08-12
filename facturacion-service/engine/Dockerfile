@@ -1,9 +1,13 @@
-FROM php:8.3-cli-alpine
+# FrankenPHP en modo clasico: una peticion por proceso, igual que php-fpm, pero
+# en un solo binario y sin nginx delante.
+#
+# Reemplaza a `php -S`, que la propia documentacion de PHP marca como servidor de
+# desarrollo: no supervisa procesos, no reinicia ordenadamente y no limita
+# peticiones. Con PHP_CLI_SERVER_WORKERS aguantaba la carga, pero no es a lo que
+# se le confia el camino del dinero.
+FROM dunglas/frankenphp:1-php8.3-alpine
 
-RUN apk add --no-cache libzip \
-    && apk add --no-cache --virtual .build-deps libxml2-dev libzip-dev \
-    && docker-php-ext-install soap zip \
-    && apk del .build-deps
+RUN install-php-extensions soap zip
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -13,13 +17,15 @@ COPY composer.json ./
 RUN composer install --no-dev --no-interaction --no-progress
 
 COPY src/ ./src/
+COPY public/ ./public/
+
+# Sin nombre de dominio, ":8000" hace que escuche en HTTP plano: el motor solo se
+# alcanza desde la red interna del compose, nunca desde fuera.
+ENV SERVER_NAME=:8000
+ENV FRANKENPHP_CONFIG=""
 
 EXPOSE 8000
 
-# El servidor embebido de PHP atiende una peticion a la vez. Con varios workers
-# de River en paralelo, uno bloquea a los demas hasta el timeout. PHP_CLI_SERVER_WORKERS
-# lo hace forkear procesos hijos.
-# ponytail: alcanza para este volumen; migrar a php-fpm + nginx si sube la carga.
-ENV PHP_CLI_SERVER_WORKERS=6
-
-CMD ["php", "-S", "0.0.0.0:8000", "src/server.php"]
+# No se usa el modo worker de FrankenPHP a proposito: server.php da por hecho un
+# proceso limpio por peticion (superglobales, ob_start, shutdown handler), y el
+# estado compartido entre peticiones filtraria credenciales de un emisor a otro.

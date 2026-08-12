@@ -22,6 +22,8 @@ type ComprobanteResponse struct {
 	Ticket       string    `json:"ticket,omitempty"`
 	XMLB64       string    `json:"xml_b64,omitempty"`
 	CDRB64       string    `json:"cdr_b64,omitempty"`
+	QR           string    `json:"qr,omitempty"`
+	Hash         string    `json:"hash,omitempty"`
 	Intentos     int       `json:"intentos"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`

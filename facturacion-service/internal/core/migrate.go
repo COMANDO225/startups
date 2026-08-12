@@ -17,7 +17,7 @@ import (
 )
 
 func migrateAll(ctx context.Context, pool *pgxpool.Pool, dsn string) error {
-	if err := migrateDomain(dsn); err != nil {
+	if err := MigrateDomain(dsn); err != nil {
 		return fmt.Errorf("migrando dominio: %w", err)
 	}
 	if err := migrateRiver(ctx, pool); err != nil {
@@ -26,7 +26,7 @@ func migrateAll(ctx context.Context, pool *pgxpool.Pool, dsn string) error {
 	return nil
 }
 
-func migrateDomain(dsn string) error {
+func MigrateDomain(dsn string) error {
 	src, err := iofs.New(sqlfs.Migrations, "migrations")
 	if err != nil {
 		return err

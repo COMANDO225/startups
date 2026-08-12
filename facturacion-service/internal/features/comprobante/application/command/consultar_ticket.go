@@ -61,6 +61,12 @@ func (uc *ConsultarTicket) Execute(ctx context.Context, resumenID string) error 
 		return err
 	}
 
+	// Un fallo de transporte no resuelve nada: propagarlo dejaria a las boletas
+	// en un estado que SUNAT nunca dicto. Se reintenta la consulta.
+	if res.Estado() == domain.EstadoError {
+		return domain.ErrMotor(resultado.Codigo + ": " + resultado.Mensaje)
+	}
+
 	// El CDR del resumen resuelve de una vez todas las boletas que iban dentro.
 	return uc.resumen.ResolverComprobantesDeResumen(
 		ctx, res.ID(), res.Estado(), res.CodigoSunat(), res.MensajeSunat(),

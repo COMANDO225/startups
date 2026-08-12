@@ -105,3 +105,24 @@ SELECT * FROM "comprobantes"
    AND "updated_at" < now() - make_interval(secs => @antiguedad_segundos::int)
  ORDER BY "updated_at"
  LIMIT @limite::int;
+
+-- name: ContarPorEstado :many
+-- Alimenta las metricas: sin esto no hay forma de ver, en un vistazo, si algo
+-- se esta acumulando en un estado que no deberia.
+SELECT "estado", count(*) AS "total"
+  FROM "comprobantes"
+ GROUP BY "estado";
+
+-- name: ContarRequierenAtencion :one
+-- Lo mismo que ComprobantesRequierenAtencion pero de todos los emisores: es la
+-- cifra que tiene que estar en cero, y que hoy nadie mira.
+SELECT count(*) FROM "comprobantes"
+ WHERE "estado" = 'duplicado'
+    OR ("estado" IN ('pendiente', 'procesando', 'error') AND "intentos" >= @max_intentos::int);
+
+-- name: AntiguedadDelMasViejoSinResolver :one
+-- Segundos que lleva esperando el comprobante mas antiguo que aun no llega a un
+-- estado final. Es la senal mas temprana de que el pipeline se atasco.
+SELECT coalesce(extract(epoch FROM now() - min("created_at")), 0)::float8
+  FROM "comprobantes"
+ WHERE "estado" NOT IN ('aceptado', 'observado', 'rechazado', 'duplicado', 'anulado');

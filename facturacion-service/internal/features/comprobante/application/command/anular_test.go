@@ -14,6 +14,12 @@ type resumenFake struct {
 	correlativos map[string]int64
 	resumenes    map[string]*domain.Resumen
 	asignados    map[string][]string
+
+	// Para los flujos de resumen: que boletas hay pendientes, cuales entraron a
+	// cada resumen y con que estado quedaron resueltas.
+	boletas   []*domain.Comprobante
+	tomados   map[string]bool
+	resueltos map[string]domain.Estado
 }
 
 func nuevoResumenFake() *resumenFake {
@@ -21,6 +27,8 @@ func nuevoResumenFake() *resumenFake {
 		correlativos: map[string]int64{},
 		resumenes:    map[string]*domain.Resumen{},
 		asignados:    map[string][]string{},
+		tomados:      map[string]bool{},
+		resueltos:    map[string]domain.Estado{},
 	}
 }
 
@@ -43,7 +51,12 @@ func (r *resumenFake) ResumenPorID(_ context.Context, id string) (*domain.Resume
 	return res, nil
 }
 
+// Igual que en produccion: solo un worker gana, los demas reciben conflicto.
 func (r *resumenFake) TomarResumen(_ context.Context, id string) (*domain.Resumen, error) {
+	if r.tomados[id] {
+		return nil, domain.ErrYaTomado()
+	}
+	r.tomados[id] = true
 	return r.ResumenPorID(context.Background(), id)
 }
 func (r *resumenFake) ActualizarResumen(context.Context, *domain.Resumen) error { return nil }
@@ -54,18 +67,22 @@ func (r *resumenFake) GruposPendientes(context.Context, int) ([]domain.GrupoBole
 	return nil, nil
 }
 func (r *resumenFake) BoletasParaResumen(context.Context, string, time.Time, int) ([]*domain.Comprobante, error) {
-	return nil, nil
+	return r.boletas, nil
 }
 
 func (r *resumenFake) AsignarResumen(_ context.Context, resumenID string, ids []string) error {
 	r.asignados[resumenID] = ids
 	return nil
 }
-func (r *resumenFake) ResolverComprobantesDeResumen(context.Context, string, domain.Estado, string, string) error {
+func (r *resumenFake) ResolverComprobantesDeResumen(_ context.Context, resumenID string, estado domain.Estado, _, _ string) error {
+	for _, id := range r.asignados[resumenID] {
+		r.resueltos[id] = estado
+	}
 	return nil
 }
+
 func (r *resumenFake) ComprobantesDeResumen(context.Context, string) ([]*domain.Comprobante, error) {
-	return nil, nil
+	return r.boletas, nil
 }
 
 type colaResumenFake struct{ enviados []string }

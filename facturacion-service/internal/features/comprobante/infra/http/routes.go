@@ -18,6 +18,8 @@ func Register(router fiber.Router, ctrl *Controller, tenants domain.TenantReposi
 	g.Get("/", ctrl.Listar)
 	g.Get("/atencion", ctrl.Atencion)
 	g.Get("/:id", ctrl.Obtener)
+	g.Get("/:id/impresa", ctrl.Impresa)
+	g.Get("/:id/qr.png", ctrl.QRPNG)
 	g.Post("/:id/anular", ctrl.Anular)
 }
 

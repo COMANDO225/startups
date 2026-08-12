@@ -46,6 +46,21 @@ func (q *Queries) ActualizarComprobante(ctx context.Context, arg ActualizarCompr
 	return err
 }
 
+const antiguedadDelMasViejoSinResolver = `-- name: AntiguedadDelMasViejoSinResolver :one
+SELECT coalesce(extract(epoch FROM now() - min("created_at")), 0)::float8
+  FROM "comprobantes"
+ WHERE "estado" NOT IN ('aceptado', 'observado', 'rechazado', 'duplicado', 'anulado')
+`
+
+// Segundos que lleva esperando el comprobante mas antiguo que aun no llega a un
+// estado final. Es la senal mas temprana de que el pipeline se atasco.
+func (q *Queries) AntiguedadDelMasViejoSinResolver(ctx context.Context) (float64, error) {
+	row := q.db.QueryRow(ctx, antiguedadDelMasViejoSinResolver)
+	var column_1 float64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const comprobantePorID = `-- name: ComprobantePorID :one
 SELECT id, tenant_id, idempotency_key, tipo_doc, serie, correlativo, estado, payload, moneda, importe_total, fecha_emision, xml, cdr, ticket, codigo_sunat, mensaje_sunat, intentos, tomado_at, created_at, updated_at, resumen_id, motivo_baja, webhook_enviado FROM "comprobantes"
  WHERE "tenant_id" = $1 AND "id" = $2
@@ -318,6 +333,54 @@ SELECT count(*) FROM "comprobantes" WHERE "tenant_id" = $1
 
 func (q *Queries) ContarComprobantes(ctx context.Context, tenantID string) (int64, error) {
 	row := q.db.QueryRow(ctx, contarComprobantes, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const contarPorEstado = `-- name: ContarPorEstado :many
+SELECT "estado", count(*) AS "total"
+  FROM "comprobantes"
+ GROUP BY "estado"
+`
+
+type ContarPorEstadoRow struct {
+	Estado string
+	Total  int64
+}
+
+// Alimenta las metricas: sin esto no hay forma de ver, en un vistazo, si algo
+// se esta acumulando en un estado que no deberia.
+func (q *Queries) ContarPorEstado(ctx context.Context) ([]ContarPorEstadoRow, error) {
+	rows, err := q.db.Query(ctx, contarPorEstado)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ContarPorEstadoRow{}
+	for rows.Next() {
+		var i ContarPorEstadoRow
+		if err := rows.Scan(&i.Estado, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const contarRequierenAtencion = `-- name: ContarRequierenAtencion :one
+SELECT count(*) FROM "comprobantes"
+ WHERE "estado" = 'duplicado'
+    OR ("estado" IN ('pendiente', 'procesando', 'error') AND "intentos" >= $1::int)
+`
+
+// Lo mismo que ComprobantesRequierenAtencion pero de todos los emisores: es la
+// cifra que tiene que estar en cero, y que hoy nadie mira.
+func (q *Queries) ContarRequierenAtencion(ctx context.Context, maxIntentos int32) (int64, error) {
+	row := q.db.QueryRow(ctx, contarRequierenAtencion, maxIntentos)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

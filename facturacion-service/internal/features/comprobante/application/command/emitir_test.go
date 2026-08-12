@@ -18,6 +18,7 @@ type repoFake struct {
 	porKey       map[string]*domain.Comprobante
 	tomados      map[string]bool
 	anulados     map[string]bool
+	notificados  map[string]bool
 }
 
 func nuevoRepoFake() *repoFake {
@@ -26,6 +27,7 @@ func nuevoRepoFake() *repoFake {
 		porKey:       map[string]*domain.Comprobante{},
 		tomados:      map[string]bool{},
 		anulados:     map[string]bool{},
+		notificados:  map[string]bool{},
 	}
 }
 
@@ -84,17 +86,42 @@ type txFake struct{}
 
 func (txFake) RunInTx(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
 
+// payloadValido: lo minimo que SUNAT acepta. Los tests que prueban rechazos
+// parten de aqui y rompen un campo a la vez.
+func payloadValido(importe string) json.RawMessage {
+	return json.RawMessage(`{
+		"totales": {"importe_total": ` + importe + `},
+		"receptor": {"tipo_doc": "6", "num_doc": "20000000001", "razon_social": "CLIENTE DE PRUEBA SAC"},
+		"items": [{"descripcion": "menu del dia"}]
+	}`)
+}
+
 func cmdBase() EmitirCmd {
 	return EmitirCmd{
 		TenantID:       "tenant-1",
 		IdempotencyKey: "venta-001",
 		TipoDoc:        "01",
 		Serie:          "F001",
-		Payload:        json.RawMessage(`{"totales":{"importe_total":118.00}}`),
+		Payload:        payloadValido("118.00"),
 		Moneda:         "PEN",
 		ImporteTotal:   "118.00",
 		FechaEmision:   time.Now(),
 	}
+}
+
+// boletaBase: la venta tipica de un restaurante, a consumidor final sin
+// documento. No puede rechazarse.
+func boletaBase() EmitirCmd {
+	cmd := cmdBase()
+	cmd.TipoDoc = "03"
+	cmd.Serie = "B001"
+	cmd.Payload = json.RawMessage(`{
+		"totales": {"importe_total": 25.00},
+		"receptor": {"tipo_doc": "0", "num_doc": "-", "razon_social": "VARIOS"},
+		"items": [{"descripcion": "menu del dia"}]
+	}`)
+	cmd.ImporteTotal = "25.00"
+	return cmd
 }
 
 // El caso que motiva todo el diseño: un retry del cliente no puede generar un
@@ -157,6 +184,30 @@ func TestEmitirValidaAntesDeQuemarCorrelativo(t *testing.T) {
 		{"payload sin totales", func(c *EmitirCmd) { c.Payload = json.RawMessage(`{}`) }},
 		{"payload ilegible", func(c *EmitirCmd) { c.Payload = json.RawMessage(`no es json`) }},
 		{"importe distinto al del payload", func(c *EmitirCmd) { c.ImporteTotal = "999.00" }},
+
+		// Los que SUNAT nos rechazo en la prueba de carga: 10 de 30 se fueron
+		// con codigo 2022 y el correlativo se quemo igual.
+		{"razon social de un caracter", func(c *EmitirCmd) {
+			c.Payload = conReceptor(`"tipo_doc":"6","num_doc":"20000000001","razon_social":"C"`)
+		}},
+		{"razon social vacia", func(c *EmitirCmd) {
+			c.Payload = conReceptor(`"tipo_doc":"6","num_doc":"20000000001","razon_social":"   "`)
+		}},
+		{"factura a DNI", func(c *EmitirCmd) {
+			c.Payload = conReceptor(`"tipo_doc":"1","num_doc":"46778912","razon_social":"JUAN PEREZ"`)
+		}},
+		{"RUC con digito verificador malo", func(c *EmitirCmd) {
+			c.Payload = conReceptor(`"tipo_doc":"6","num_doc":"20000000009","razon_social":"CLIENTE SAC"`)
+		}},
+		{"RUC de 10 digitos", func(c *EmitirCmd) {
+			c.Payload = conReceptor(`"tipo_doc":"6","num_doc":"2000000000","razon_social":"CLIENTE SAC"`)
+		}},
+		{"tipo de documento fuera del catalogo", func(c *EmitirCmd) {
+			c.Payload = conReceptor(`"tipo_doc":"9","num_doc":"20000000001","razon_social":"CLIENTE SAC"`)
+		}},
+		{"sin items", func(c *EmitirCmd) {
+			c.Payload = json.RawMessage(`{"totales":{"importe_total":118.00},"receptor":{"tipo_doc":"6","num_doc":"20000000001","razon_social":"CLIENTE SAC"},"items":[]}`)
+		}},
 	}
 
 	for _, caso := range casos {
@@ -180,16 +231,55 @@ func TestEmitirValidaAntesDeQuemarCorrelativo(t *testing.T) {
 	}
 }
 
+func conReceptor(receptor string) json.RawMessage {
+	return json.RawMessage(`{
+		"totales": {"importe_total": 118.00},
+		"receptor": {` + receptor + `},
+		"items": [{"descripcion": "menu del dia"}]
+	}`)
+}
+
 // "118" y "118.00" son el mismo monto.
 func TestEmitirAceptaImportesEquivalentes(t *testing.T) {
 	uc := NewEmitir(nuevoRepoFake(), &colaFake{}, txFake{})
 
 	cmd := cmdBase()
 	cmd.ImporteTotal = "118.00"
-	cmd.Payload = json.RawMessage(`{"totales":{"importe_total":118}}`)
+	cmd.Payload = payloadValido("118")
 
 	if _, err := uc.Execute(context.Background(), cmd); err != nil {
 		t.Fatalf("rechazo importes equivalentes: %v", err)
+	}
+}
+
+// La venta mas comun de un restaurante: boleta chica, cliente sin documento.
+// Validar de mas aqui seria peor que no validar.
+func TestEmitirAceptaBoletaSinDocumento(t *testing.T) {
+	uc := NewEmitir(nuevoRepoFake(), &colaFake{}, txFake{})
+
+	if _, err := uc.Execute(context.Background(), boletaBase()); err != nil {
+		t.Fatalf("rechazo una boleta a consumidor final: %v", err)
+	}
+}
+
+// Pero pasando S/700 SUNAT exige identificar al comprador.
+func TestEmitirRechazaBoletaGrandeSinDocumento(t *testing.T) {
+	repo := nuevoRepoFake()
+	uc := NewEmitir(repo, &colaFake{}, txFake{})
+
+	cmd := boletaBase()
+	cmd.Payload = json.RawMessage(`{
+		"totales": {"importe_total": 850.00},
+		"receptor": {"tipo_doc": "0", "num_doc": "-", "razon_social": "VARIOS"},
+		"items": [{"descripcion": "banquete"}]
+	}`)
+	cmd.ImporteTotal = "850.00"
+
+	if _, err := uc.Execute(context.Background(), cmd); err == nil {
+		t.Fatal("acepto una boleta de S/850 sin documento del comprador")
+	}
+	if repo.correlativo != 0 {
+		t.Fatalf("quemo un correlativo: contador = %d", repo.correlativo)
 	}
 }
 
@@ -224,7 +314,10 @@ func (r *repoFake) RequierenAtencion(context.Context, string, int) ([]*domain.Co
 	return nil, nil
 }
 
-func (r *repoFake) MarcarWebhookEnviado(context.Context, string) error { return nil }
+func (r *repoFake) MarcarWebhookEnviado(_ context.Context, id string) error {
+	r.notificados[id] = true
+	return nil
+}
 
 func (r *repoFake) MarcarAnulado(_ context.Context, id, _ string) error {
 	r.anulados[id] = true
@@ -249,14 +342,24 @@ func (tenantsFake) PorID(context.Context, string) (*domain.Tenant, error) {
 }
 func (tenantsFake) PorAPIKey(context.Context, string) (*domain.Tenant, error) { return nil, nil }
 
-type motorFake struct{ llamadas int }
+type motorFake struct {
+	llamadas  int
+	resumenes int
+
+	// ticketRespuesta permite simular lo que SUNAT contesta al consultar el
+	// ticket: pendiente, aceptado o un fallo de transporte.
+	ticketRespuesta *domain.ResultadoEmision
+}
 
 func (m *motorFake) Emitir(context.Context, *domain.Tenant, []byte, domain.TipoDoc, string, int64, time.Time) (*domain.ResultadoEmision, error) {
 	m.llamadas++
 	return &domain.ResultadoEmision{Codigo: "0", Mensaje: "aceptada", XML: []byte("<xml/>"), CDR: []byte("cdr")}, nil
 }
 func (m *motorFake) ConsultarTicket(context.Context, *domain.Tenant, string) (*domain.ResultadoEmision, error) {
-	return nil, nil
+	if m.ticketRespuesta != nil {
+		return m.ticketRespuesta, nil
+	}
+	return &domain.ResultadoEmision{Estado: "pendiente"}, nil
 }
 
 func (m *motorFake) Firmar(context.Context, *domain.Tenant, []byte, domain.TipoDoc, string, int64, time.Time) (*domain.ResultadoEmision, error) {
@@ -265,6 +368,7 @@ func (m *motorFake) Firmar(context.Context, *domain.Tenant, []byte, domain.TipoD
 }
 
 func (m *motorFake) EnviarResumen(context.Context, *domain.Tenant, *domain.Resumen, []domain.DetalleResumen) (*domain.ResultadoEmision, error) {
+	m.resumenes++
 	return &domain.ResultadoEmision{Ticket: "ticket-1", XML: []byte("<rc/>")}, nil
 }
 

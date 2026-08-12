@@ -151,3 +151,34 @@ type EnviadorWebhook interface {
 type Encolador interface {
 	EncolarEmision(ctx context.Context, comprobanteID string) error
 }
+
+// SaludPipeline es la foto que necesitan las metricas y la alerta: cuantos
+// comprobantes hay en cada estado, cuantos requieren intervencion humana y
+// cuanto lleva esperando el mas antiguo sin resolver.
+type SaludPipeline struct {
+	PorEstado          map[Estado]int64
+	RequierenAtencion  int64
+	AntiguedadMasViejo time.Duration
+}
+
+// SerieConfig es una serie habilitada para un emisor. Sin al menos una, no
+// puede emitir nada.
+type SerieConfig struct {
+	TipoDoc TipoDoc
+	Serie   string
+}
+
+// NuevoTenant junta todo lo que hace falta para dar de alta un emisor. El
+// certificado y la clave SOL viajan en claro hasta el repositorio, que es donde
+// se cifran antes de tocar la base.
+type NuevoTenant struct {
+	Tenant     Tenant
+	APIKeyHash string
+	Series     []SerieConfig
+}
+
+// AltaEmisor separa la escritura de tenants de la lectura: solo el alta la
+// necesita, y es la unica operacion que recibe secretos en claro.
+type AltaEmisor interface {
+	CrearTenant(ctx context.Context, nuevo NuevoTenant) error
+}

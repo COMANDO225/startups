@@ -124,21 +124,34 @@ fallo del motor es indepurable.
 
 ```bash
 docker compose up -d
-DATABASE_URL="postgres://facturacion:facturacion@localhost:5433/facturacion?sslmode=disable" \
-  go run ./cmd/seed engine/certs/certificate.pem      # crea emisor de prueba + series
 
-curl -X POST localhost:8080/v1/comprobantes \
-  -H 'Authorization: Bearer test-api-key' \
-  -H 'Idempotency-Key: venta-001' \
-  -H 'Content-Type: application/json' -d @factura.json     # → 202
-curl localhost:8080/v1/comprobantes/<id> -H 'Authorization: Bearer test-api-key'
-```
-
-El certificado de prueba se genera con:
-```bash
+# 1. Certificado de prueba (autofirmado: BETA no exige uno registrado)
 openssl req -x509 -newkey rsa:2048 -keyout k.pem -out c.pem -days 730 -nodes \
-  -subj "/C=PE/O=EMPRESA DE PRUEBA SAC/CN=20000000001" && cat k.pem c.pem > certificate.pem
+  -subj "/C=PE/O=EMPRESA DE PRUEBA SAC/CN=20000000001"
+cat k.pem c.pem > certificate.pem && rm k.pem c.pem
+
+# 2. Alta del emisor por API. Devuelve la api_key UNA sola vez.
+curl -X POST localhost:8080/v1/emisores \
+  -H 'Authorization: Bearer token-admin-desarrollo' -H 'Content-Type: application/json' \
+  -d "{\"ruc\":\"20000000001\",\"razon_social\":\"EMPRESA DE PRUEBA SAC\",
+       \"direccion\":\"AV. PRUEBA 123\",\"sol_user\":\"MODDATOS\",\"sol_pass\":\"moddatos\",
+       \"cert_pem_b64\":\"$(base64 -w0 certificate.pem)\"}"
+
+# 3. Emitir
+curl -X POST localhost:8080/v1/comprobantes \
+  -H "Authorization: Bearer $API_KEY" -H 'Idempotency-Key: venta-001' \
+  -H 'Content-Type: application/json' -d @factura.json     # → 202
+
+curl "localhost:8080/v1/comprobantes/$ID"         -H "Authorization: Bearer $API_KEY"
+curl "localhost:8080/v1/comprobantes/$ID/impresa" -H "Authorization: Bearer $API_KEY"
 ```
+
+`cmd/seed` sigue existiendo para levantar un entorno rápido desde la terminal, pero
+**el camino real es `POST /v1/emisores`**: valida el RUC y el certificado antes de
+guardarlo.
+
+Tests: `go test ./...` (los de integración levantan un Postgres con testcontainers;
+`-short` los omite).
 
 ## Anulación: el camino depende de cómo llegó a SUNAT, no del tipo
 
@@ -182,6 +195,7 @@ iguales.
 
 | Código | Estado |
 |---|---|
+| **no numérico** (`HTTP`, `SOAP-ENV:*`, vacío) | **error** — fallo de transporte, reintentable |
 | `0` | aceptado |
 | `4xxx` | observado (aceptado con advertencias) |
 | **`1033`, `2109`** | **duplicado** — SUNAT ya lo tiene |
@@ -189,6 +203,22 @@ iguales.
 
 **El default es rechazado a propósito:** dar por bueno un comprobante que SUNAT no
 aceptó es mucho peor que marcar como rechazado uno que sí pasó.
+
+### Pero un código no numérico NO viene de SUNAT
+
+Greenter extrae los dígitos del `SoapFault` (`preg_replace('/[^0-9]+/', '', $code)`
+en `BaseSunat::getErrorByCode`) y solo devuelve el código crudo cuando no encontró
+ninguno: `"HTTP"` en un 401, `"SOAP-ENV:Server"` en una caída.
+
+Eso es un **fallo de transporte, no un rechazo del documento.** Clasificarlo como
+rechazado — que es lo que hacía — mataba el comprobante en un estado final y
+quemaba el correlativo por un problema de red.
+
+> **Se descubrió con una prueba de carga: 30 emisiones simultáneas → 20 muertas
+> con `HTTP Unauthorized`.** Ninguna era un rechazo real.
+
+`procesar.go` y `consultar_ticket.go` devuelven error cuando el estado queda en
+`error`, para que River reintente con backoff en vez de cerrar el job.
 
 `1033`/`2109` = *"el comprobante fue registrado previamente con otros datos"*.
 Aparece cuando reenviamos algo que sí llegó a SUNAT pero cuyo CDR no alcanzamos a
@@ -324,19 +354,130 @@ comprobante llega a estado final → encola NotificarArgs → POST al webhook_ur
 - ✅ **Fase 4 — Asíncronos:** boletas por Resumen Diario (verificado: ticket real
       de SUNAT), `ConsultarTicketWorker` con `JobSnooze`, webhooks con HMAC
       (verificado end-to-end), notas de crédito/débito y comunicación de baja.
+- ✅ **Fase 5 — Producción.** Lo que destapó una prueba de carga de 30 emisiones
+      concurrentes (que dejó 30 de 31 rechazadas) y cómo quedó:
+
+| Hallazgo | Antes | Ahora |
+|---|---|---|
+| Fallo de red clasificado como rechazo | 20 comprobantes muertos, correlativos quemados | `error` retomable; **se recuperan solos en 15–30 s** |
+| Sin límite de concurrencia hacia SUNAT | 20 × `401` en una ráfaga | serializado por RUC; **30/30 aceptadas** |
+| Validación previa incompleta | 10 × `2022`, correlativo quemado igual | receptor, notas y certificado validados **antes del contador** |
+| Fecha del XML ≠ fecha registrada | `IssueDate` un día atrás | mediodía de Lima; **coinciden** |
+| Sin representación impresa | requisito legal sin cumplir | QR + HTML imprimible, **QR decodificado y verificado** |
+| Notas nunca enviadas | camino sin ejercitar | **crédito y débito aceptadas por SUNAT** |
+| `php -S` (servidor de desarrollo) | expuesto al host, sin supervisión | **FrankenPHP**, sin puerto publicado |
+| Alta de emisores | solo `cmd/seed` | `POST /v1/emisores`, verificado desde base vacía |
+| Sin observabilidad | a ciegas | `/metrics` + alerta cuando `/atencion` deja de estar vacío |
+| 21 tests, 4 casos de uso sin ninguno | fakes simulaban los constraints | **65 tests**, integración con Postgres real (testcontainers) |
 
 ## Endpoints
 
 ```
-POST /v1/comprobantes            emitir            → 202 {id, numero, estado}
-POST /v1/comprobantes/:id/anular dar de baja       → 202
-GET  /v1/comprobantes            listar
-GET  /v1/comprobantes/atencion   lo que nadie más va a mirar
-GET  /v1/comprobantes/:id        detalle + XML y CDR en base64
-GET  /livez  /readyz             salud
+POST /v1/emisores                 alta de emisor    → 201 {api_key, ...}   [ADMIN_TOKEN]
+POST /v1/comprobantes             emitir            → 202 {id, numero, estado}
+POST /v1/comprobantes/:id/anular  dar de baja       → 202
+GET  /v1/comprobantes             listar
+GET  /v1/comprobantes/atencion    lo que nadie más va a mirar
+GET  /v1/comprobantes/:id         detalle + XML, CDR, qr y hash
+GET  /v1/comprobantes/:id/impresa representación impresa (HTML para imprimir)
+GET  /v1/comprobantes/:id/qr.png  QR suelto, para impresora térmica
+GET  /metrics                     formato Prometheus  [METRICS_TOKEN, opcional]
+GET  /livez  /readyz              salud
 ```
 
 Cabeceras obligatorias: `Authorization: Bearer <api-key>` e `Idempotency-Key`.
+
+`POST /v1/emisores` usa **su propio token** (`ADMIN_TOKEN`), no una API key: es el
+endpoint que las crea. Sin el token configurado, el alta queda deshabilitada.
+La `api_key` se muestra **una sola vez**; en la base solo queda su SHA-256.
+
+### En `sol_user` va un usuario SECUNDARIO, no la Clave SOL principal
+
+Con la Clave SOL principal se puede declarar impuestos, ver toda la información
+tributaria del cliente y tocar su RUC. Con un **usuario secundario** de perfil
+restringido, solo emitir comprobantes.
+
+El WSSE autentica igual (`RUC + usuario`), así que **el código no cambia**: es una
+regla de onboarding. Lo crea el cliente desde su SOL; nosotros no podemos.
+
+> El certificado es otra historia: firma cualquier cosa y **eso no se puede acotar**
+> en esta arquitectura. O vive aquí, o no hay SaaS. Acotarlo de verdad exige un HSM,
+> y eso es para cuando haya volumen.
+
+Detalle legal completo (PSE vs OSE vs SEE-Del Contribuyente) en `../CONTEXT.md`.
+
+## Representación impresa y QR
+
+Requisito legal desde enero 2019. Cadena del QR, separada por `|`:
+
+```
+RUC | TIPO_DOC | SERIE | NUMERO | IGV | TOTAL | FECHA | TIPO_DOC_ADQ | NUM_DOC_ADQ | VALOR_RESUMEN
+```
+
+`VALOR_RESUMEN` es el **DigestValue de la firma**. Se extrae del XML guardado con
+`domain.DigestDeXML` en vez de persistirlo aparte: es un dato derivado y tenerlo
+duplicado solo abre la puerta a que discrepen.
+
+**No generamos PDF.** El navegador lo hace desde el HTML con `@media print`.
+`wkhtmltopdf` (el que usa `greenter/report`) está archivado desde enero 2023 y
+arrastra **CVE-2022-35583, un SSRF de CVSS 9.8**: no cabe en un servicio que
+custodia claves privadas.
+
+La plantilla (`infra/http/impresa.html`) recibe un struct. Cuando un emisor pida su
+logo, se agrega el campo y se reusa la validación anti-SSRF de `webhook/sender.go`.
+
+## Hora de Lima: no es un detalle cosmético
+
+**Greenter renderiza el XML en `America/Lima` siempre** (`TwigBuilder.php:70`,
+`TimeZonePe::DEFAULT`). Enviarle la medianoche UTC del día 6 producía
+`IssueDate 2026-08-05` — **el documento legal con una fecha distinta a la nuestra.**
+
+Y antes de eso: una venta de las 20:00 en Lima ya es del día siguiente en UTC, así
+que `time.Now()` registraba el día equivocado.
+
+`domain/tiempo.go` resuelve ambas:
+
+- `HoyEnLima()` — la fecha de emisión es una **fecha de calendario peruana**.
+- `FechaEmisionLima(f)` — fija el día al **mediodía de Lima**, sin convertir zona
+  (lo que viene de una columna `date` es un día, no un instante: convertirlo sería
+  el error que esto evita). El mediodía deja margen para que ninguna conversión
+  mueva el día.
+
+Se importa `_ "time/tzdata"`: la imagen del contenedor no trae la base de zonas y
+`LoadLocation` caería a UTC sin avisar.
+
+## Límite de concurrencia hacia SUNAT
+
+**SUNAT no publica sus límites** (verificado: no hay fuente pública). Lo único
+medido es que 30 envíos simultáneos del mismo RUC producen 20 × `401`.
+
+`infra/engine/limitador.go` serializa por RUC. **Bloquea en vez de reprogramar el
+job**: para cuando la petición llega ahí, `Tomar` ya marcó el comprobante como
+`procesando`, y soltarlo lo dejaría atascado hasta la ventana de rescate.
+
+`ENGINE_MAX_POR_EMISOR` (default **1**) es la perilla. Subirla solo con medición.
+El semáforo es de proceso: con varias instancias de la API habría que moverlo a un
+advisory lock de Postgres.
+
+## Validación previa: todo lo comprobable, antes del contador
+
+Un rechazo posterior a `SiguienteCorrelativo` deja un hueco que SUNAT observa.
+
+| Regla | Dónde |
+|---|---|
+| Razón social 3–100 caracteres (**error 2022**) | `domain/receptor.go` |
+| RUC con dígito verificador (módulo 11) | `domain.RUCValido` |
+| DNI 8 dígitos, RUC 11, catálogo 06 | `domain.ValidarReceptor` |
+| Factura (y nota sobre factura) exige RUC | `domain.exigeRUC` |
+| Boleta > S/700 exige documento del comprador | `TopeBoletaSinDocumento` |
+| Motivo de nota: **catálogo 09 crédito, catálogo 10 débito** | `domain/nota.go` |
+| Certificado: PEM completo, vigente y **clave que corresponde** | `domain/certificado.go` |
+
+⚠️ **Los catálogos 09 y 10 son distintos.** El `06` (devolución total) existe en el
+de crédito y no en el de débito. Usar el equivocado es rechazo seguro.
+
+⚠️ **Una boleta chica sin documento es la venta normal de un restaurante.** Validar
+de más ahí sería peor que no validar: por debajo de S/700 el documento es opcional.
 
 ## Workers
 
@@ -354,16 +495,37 @@ de red que puede fallar, y si formara parte de la transacción que crea el resum
 un fallo dejaría las boletas sin resumen. Así el resumen queda persistido con sus
 boletas asignadas, y el envío se reintenta solo.
 
+## Rendimiento: medido, no supuesto
+
+```
+API Go (/readyz, incluye Postgres)   0.2 ms
+Engine PHP (/health)                 0.2 ms
+Emisión completa contra SUNAT        0.4 s     ← ~100% es SUNAT
+30 POST concurrentes                 instantáneos, 0 huecos
+```
+
+**Go no es el cuello de botella.** Por eso no se hizo perfilado, tuning de GC,
+cambio de router ni `sync.Pool`: serían horas en el 0.2 ms mientras el otro 99.9 %
+lo pone un tercero. Las mejoras reales fueron de **control de flujo** (el limitador
+por emisor), no de velocidad.
+
 ## Deuda conocida
 
-- **`/atencion` existe pero nadie lo mira.** El listado está; falta que algo avise
-  (correo, webhook, métrica) cuando deja de estar vacío.
-- **Representación impresa con QR:** requisito legal, sin construir.
-- **Alta de tenants:** solo existe `cmd/seed`; falta el endpoint real con carga
-  del certificado.
-- **Notas de crédito/débito:** el motor las construye (`buildNote`) y el camino
-  está, pero **no se probaron contra BETA**.
 - **`domain.TimeoutProcesando` está duplicado en `config`** como `timeoutProcesando`
   para que config no dependa de un feature. Si uno cambia, hay que cambiar el otro.
-- El seed usa una API key fija (`test-api-key`); falta el alta real de tenants.
 - El barrido de huérfanos es global: con muchos tenants convendría particionarlo.
+- El limitador de concurrencia es **de proceso**: con varias instancias de la API
+  hay que moverlo a un advisory lock de Postgres.
+- La plantilla de impresión es una sola para todos; no hay marca por emisor.
+- `/metrics` no incluye métricas del runtime de Go (se escribe el formato a mano
+  para no sumar `client_golang`). Si hacen falta GC y goroutines, ahí sí conviene.
+- **Sin resolver, y es legal, no técnico:** confirmar con un contador o abogado
+  tributarista si custodiar el certificado del cliente es "software del
+  contribuyente" o ya es actividad de PSE.
+
+## Fuera de alcance, justificado
+
+**Guía de Remisión Electrónica (GRE).** SUNAT no la exige para delivery de comida
+preparada a consumidor final; aplica a catering empresarial y traslado de insumos
+entre locales. Sería una plataforma nueva (REST + OAuth2, distinta del SOAP actual)
+para un caso que un restaurante típico no tiene.

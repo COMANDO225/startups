@@ -43,6 +43,29 @@ func ErrImporteIncoherente(declarado, enPayload string) *domainerr.Error {
 		WithSuggestion("El monto registrado debe ser identico al del documento que se envia a SUNAT")
 }
 
+func ErrCertificadoInvalido(detalle string) *domainerr.Error {
+	return domainerr.Validation("El certificado digital es invalido: " + detalle).
+		WithCode("CERTIFICADO_INVALIDO").
+		WithSuggestion("Debe ser un PEM con la clave privada y el certificado emitido por una entidad acreditada")
+}
+
+func ErrEmisorDuplicado(ruc string) *domainerr.Error {
+	return domainerr.Conflict("Ya existe un emisor con el RUC " + ruc).
+		WithCode("EMISOR_DUPLICADO")
+}
+
+func ErrNotaInvalida(detalle string) *domainerr.Error {
+	return domainerr.Validation("La nota es invalida: " + detalle).
+		WithCode("NOTA_INVALIDA").
+		WithSuggestion("SUNAT rechazaria el comprobante y el correlativo se perderia")
+}
+
+func ErrReceptorInvalido(detalle string) *domainerr.Error {
+	return domainerr.Validation("El receptor es invalido: " + detalle).
+		WithCode("RECEPTOR_INVALIDO").
+		WithSuggestion("SUNAT rechazaria el comprobante y el correlativo se perderia")
+}
+
 // ErrYaTomado: otro worker gano la carrera. No se puede cerrar el job sin mas,
 // porque ese otro worker podria morir: hay que consultar el estado real y
 // decidir entre cerrar o reprogramar.

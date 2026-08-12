@@ -78,3 +78,70 @@ func (r *TenantRepo) aDominio(row comprobantedb.Tenant) (*domain.Tenant, error) 
 		WebhookSecret:   string(webhookSecret),
 	}, nil
 }
+
+// CrearTenant cifra el certificado, la Clave SOL y el secreto del webhook antes
+// de escribirlos: en la base nunca hay un secreto en claro.
+func (r *TenantRepo) CrearTenant(ctx context.Context, nuevo domain.NuevoTenant) error {
+	q := comprobantedb.New(transaction.Querier(ctx, r.pool))
+	t := nuevo.Tenant
+
+	certCifrado, err := r.cipher.Encrypt([]byte(t.CertPEM))
+	if err != nil {
+		return err
+	}
+
+	passCifrado, err := r.cipher.Encrypt([]byte(t.SolPass))
+	if err != nil {
+		return err
+	}
+
+	secretoCifrado, err := r.cipher.Encrypt([]byte(t.WebhookSecret))
+	if err != nil {
+		return err
+	}
+
+	err = q.CrearTenant(ctx, comprobantedb.CrearTenantParams{
+		ID:                   t.ID,
+		Ruc:                  t.RUC,
+		RazonSocial:          t.RazonSocial,
+		NombreComercial:      ptrSiNoVacio(t.NombreComercial),
+		Direccion:            t.Direccion,
+		Ubigeo:               t.Ubigeo,
+		Departamento:         t.Departamento,
+		Provincia:            t.Provincia,
+		Distrito:             t.Distrito,
+		CertCifrado:          certCifrado,
+		SolUser:              t.SolUser,
+		SolPassCifrado:       passCifrado,
+		Produccion:           t.Produccion,
+		ApiKeyHash:           nuevo.APIKeyHash,
+		WebhookUrl:           ptrSiNoVacio(t.WebhookURL),
+		WebhookSecretCifrado: secretoCifrado,
+	})
+	if err != nil {
+		if pgxerr.IsUniqueViolation(err) {
+			return domain.ErrEmisorDuplicado(t.RUC)
+		}
+		return err
+	}
+
+	for _, s := range nuevo.Series {
+		if err := q.CrearSerie(ctx, comprobantedb.CrearSerieParams{
+			TenantID:    t.ID,
+			TipoDoc:     string(s.TipoDoc),
+			Serie:       s.Serie,
+			Correlativo: 0,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ptrSiNoVacio(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}

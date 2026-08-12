@@ -7,6 +7,8 @@ services:
       POSTGRES_USER: facturacion
       POSTGRES_PASSWORD: facturacion
       POSTGRES_DB: facturacion
+    # Publicado solo para poder correr cmd/seed y consultas desde el host en
+    # desarrollo. En produccion no deberia salir de la red interna.
     ports:
       - "5433:5432"
     volumes:
@@ -19,8 +21,9 @@ services:
 
   engine:
     build: ./engine
-    ports:
-      - "8000:8000"
+    # Sin puerto publicado a proposito: el motor recibe el certificado y la Clave
+    # SOL de cada emisor en el cuerpo de la peticion y no tiene autenticacion
+    # propia. Solo debe alcanzarse desde la red interna, por http://engine:8000.
     healthcheck:
       test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://127.0.0.1:8000/health') ? 0 : 1);\""]
       interval: 10s
@@ -43,6 +46,12 @@ services:
       # rendirse. El cliente debe esperar mas que eso para recibir el
       # "pendiente" y reprogramar, en vez de cortar por timeout.
       ENGINE_TIMEOUT: 90s
+      # SUNAT no publica su limite de concurrencia, pero rechaza las rafagas del
+      # mismo RUC con 401. 1 es el valor seguro; subirlo solo con medicion.
+      ENGINE_MAX_POR_EMISOR: 1
+      # Habilita POST /v1/emisores. Sin este token el alta queda cerrada, porque
+      # registra certificados y Claves SOL de terceros.
+      ADMIN_TOKEN: token-admin-desarrollo
     ports:
       - "8080:8080"
     extra_hosts:

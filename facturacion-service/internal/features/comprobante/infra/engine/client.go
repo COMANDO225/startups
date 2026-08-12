@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -21,12 +22,14 @@ const maxRespuesta = 16 << 20
 type Client struct {
 	baseURL string
 	http    *http.Client
+	limite  *limitador
 }
 
-func NewClient(baseURL string, timeout time.Duration) *Client {
+func NewClient(baseURL string, timeout time.Duration, maxPorEmisor int) *Client {
 	return &Client{
 		baseURL: baseURL,
 		http:    &http.Client{Timeout: timeout},
+		limite:  nuevoLimitador(maxPorEmisor),
 	}
 }
 
@@ -47,11 +50,23 @@ func (c *Client) Emitir(ctx context.Context, t *domain.Tenant, payload []byte, t
 	if err != nil {
 		return nil, err
 	}
-	return c.post(ctx, "/emitir", credenciales(t, map[string]any{"comprobante": comprobante}))
+	return c.postSunat(ctx, "/emitir", t.RUC, credenciales(t, map[string]any{"comprobante": comprobante}))
 }
 
 func (c *Client) ConsultarTicket(ctx context.Context, t *domain.Tenant, ticket string) (*domain.ResultadoEmision, error) {
-	return c.post(ctx, "/consultar-ticket", credenciales(t, map[string]any{"ticket": ticket}))
+	return c.postSunat(ctx, "/consultar-ticket", t.RUC, credenciales(t, map[string]any{"ticket": ticket}))
+}
+
+// postSunat es la unica puerta hacia SUNAT: todo lo que sale por aqui respeta el
+// turno del emisor. Firmar no pasa por aca porque no sale de la maquina.
+func (c *Client) postSunat(ctx context.Context, path, ruc string, body any) (*domain.ResultadoEmision, error) {
+	liberar, err := c.limite.adquirir(ctx, ruc)
+	if err != nil {
+		return nil, domain.ErrMotor("no se obtuvo turno para enviar a SUNAT: " + err.Error())
+	}
+	defer liberar()
+
+	return c.post(ctx, path, body)
 }
 
 func (c *Client) post(ctx context.Context, path string, body any) (*domain.ResultadoEmision, error) {
@@ -154,7 +169,7 @@ func (c *Client) EnviarResumen(ctx context.Context, t *domain.Tenant, r *domain.
 		}
 	}
 
-	return c.post(ctx, "/resumen", credenciales(t, map[string]any{
+	return c.postSunat(ctx, "/resumen", t.RUC, credenciales(t, map[string]any{
 		"resumen": map[string]any{
 			"correlativo": r.Correlativo(),
 			"fecha_ref":   r.FechaRef().Format("2006-01-02"),
@@ -175,7 +190,7 @@ func (c *Client) EnviarBaja(ctx context.Context, t *domain.Tenant, r *domain.Res
 		}
 	}
 
-	return c.post(ctx, "/baja", credenciales(t, map[string]any{
+	return c.postSunat(ctx, "/baja", t.RUC, credenciales(t, map[string]any{
 		"resumen": map[string]any{
 			"correlativo": r.Correlativo(),
 			"fecha_ref":   r.FechaRef().Format("2006-01-02"),
@@ -196,7 +211,9 @@ func armarComprobante(payload []byte, t *domain.Tenant, tipoDoc domain.TipoDoc, 
 	comprobante["tipo_doc"] = string(tipoDoc)
 	comprobante["serie"] = serie
 	comprobante["correlativo"] = correlativo
-	comprobante["fecha_emision"] = fecha.Format(time.RFC3339)
+	// Con desfase horario explicito: Greenter renderiza siempre en America/Lima,
+	// y un instante UTC se le convierte al dia anterior.
+	comprobante["fecha_emision"] = domain.FechaEmisionLima(fecha).Format(time.RFC3339)
 	comprobante["emisor"] = emisor(t)
 
 	return comprobante, nil
@@ -210,8 +227,6 @@ func credenciales(t *domain.Tenant, extra map[string]any) map[string]any {
 		"sol_pass":   t.SolPass,
 		"produccion": t.Produccion,
 	}
-	for k, v := range extra {
-		body[k] = v
-	}
+	maps.Copy(body, extra)
 	return body
 }

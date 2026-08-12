@@ -79,9 +79,11 @@ func (ctrl *Controller) Emitir(c fiber.Ctx) error {
 		return err
 	}
 
-	fecha := time.Now()
+	// La fecha de emision es una fecha de calendario peruana: una venta de las
+	// 20:00 en Lima es de ese dia, aunque en UTC ya sea el siguiente.
+	fecha := domain.HoyEnLima()
 	if req.FechaEmision != "" {
-		parsed, err := time.Parse("2006-01-02", req.FechaEmision)
+		parsed, err := time.ParseInLocation("2006-01-02", req.FechaEmision, domain.Lima)
 		if err != nil {
 			return domainerr.Validation("Fecha de emision invalida").WithCode("FECHA_INVALIDA")
 		}
@@ -116,7 +118,10 @@ func (ctrl *Controller) Obtener(c fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(toResponse(comprobante, true))
+	resp := toResponse(comprobante, true)
+	resp.QR, resp.Hash = datosQR(comprobante, tenantDe(c))
+
+	return c.JSON(resp)
 }
 
 func (ctrl *Controller) Listar(c fiber.Ctx) error {

@@ -28,6 +28,8 @@ func (a *App) registerRoutes(comprobante *comprobanteDeps) {
 		},
 	}))
 
+	app.Get("/metrics", comprobantehttp.Metricas(comprobante.monitor, a.Config.Metrics.Token))
+
 	app.Get("/", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"service": a.Config.App.Name,
@@ -36,5 +38,10 @@ func (a *App) registerRoutes(comprobante *comprobanteDeps) {
 	})
 
 	v1 := app.Group("/v1")
+
+	// Fuera del grupo autenticado por API key: el alta usa su propio token de
+	// administracion, porque crea justamente las API keys.
+	v1.Post("/emisores", comprobantehttp.CrearEmisor(comprobante.crearEmisor, a.Config.Admin.Token))
+
 	comprobantehttp.Register(v1, comprobante.controller, comprobante.tenants)
 }

@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"facturacion-service/internal/features/comprobante/domain"
@@ -111,23 +112,33 @@ func validar(tipoDoc domain.TipoDoc, cmd EmitirCmd) error {
 		return domain.ErrFechaFutura()
 	}
 
-	// El importe que se guarda debe ser el mismo que viaja a SUNAT: si difieren,
-	// el registro interno contradice al documento legal.
-	if err := verificarImporte(cmd.Payload, cmd.ImporteTotal); err != nil {
-		return err
-	}
-
-	return nil
+	return verificarPayload(tipoDoc, cmd)
 }
 
-func verificarImporte(payload json.RawMessage, declarado string) error {
-	var doc struct {
-		Totales struct {
-			ImporteTotal *json.Number `json:"importe_total"`
-		} `json:"totales"`
-	}
+type payloadEmision struct {
+	Totales struct {
+		ImporteTotal *json.Number `json:"importe_total"`
+	} `json:"totales"`
+	Receptor struct {
+		TipoDoc     string `json:"tipo_doc"`
+		NumDoc      string `json:"num_doc"`
+		RazonSocial string `json:"razon_social"`
+	} `json:"receptor"`
+	Items []json.RawMessage `json:"items"`
 
-	if err := json.Unmarshal(payload, &doc); err != nil {
+	CodigoMotivo      string `json:"codigo_motivo"`
+	DescripcionMotivo string `json:"descripcion_motivo"`
+	Referencia        struct {
+		TipoDoc     string `json:"tipo_doc"`
+		SerieNumero string `json:"serie_numero"`
+	} `json:"referencia"`
+}
+
+// Todo lo que SUNAT sabe rechazar y nosotros podemos comprobar se comprueba
+// aqui. El motor tambien valida, pero para entonces el correlativo ya se quemo.
+func verificarPayload(tipoDoc domain.TipoDoc, cmd EmitirCmd) error {
+	var doc payloadEmision
+	if err := json.Unmarshal(cmd.Payload, &doc); err != nil {
 		return domain.ErrPayloadInvalido(err.Error())
 	}
 
@@ -135,11 +146,30 @@ func verificarImporte(payload json.RawMessage, declarado string) error {
 		return domain.ErrPayloadInvalido("falta totales.importe_total")
 	}
 
-	if !mismoImporte(doc.Totales.ImporteTotal.String(), declarado) {
-		return domain.ErrImporteIncoherente(declarado, doc.Totales.ImporteTotal.String())
+	// El importe que se guarda debe ser el mismo que viaja a SUNAT: si difieren,
+	// el registro interno contradice al documento legal.
+	if !mismoImporte(doc.Totales.ImporteTotal.String(), cmd.ImporteTotal) {
+		return domain.ErrImporteIncoherente(cmd.ImporteTotal, doc.Totales.ImporteTotal.String())
 	}
 
-	return nil
+	if len(doc.Items) == 0 {
+		return domain.ErrPayloadInvalido("items no puede estar vacio")
+	}
+
+	if err := domain.ValidarReceptor(domain.Receptor{
+		TipoDoc:     doc.Receptor.TipoDoc,
+		NumDoc:      doc.Receptor.NumDoc,
+		RazonSocial: doc.Receptor.RazonSocial,
+	}, tipoDoc, cmd.Serie, cmd.ImporteTotal); err != nil {
+		return err
+	}
+
+	return domain.ValidarNota(domain.Nota{
+		CodigoMotivo:      doc.CodigoMotivo,
+		DescripcionMotivo: doc.DescripcionMotivo,
+		RefTipoDoc:        doc.Referencia.TipoDoc,
+		RefSerieNumero:    doc.Referencia.SerieNumero,
+	}, tipoDoc)
 }
 
 // Compara montos como decimales para que "118" y "118.00" cuenten como iguales.
@@ -148,24 +178,12 @@ func mismoImporte(a, b string) bool {
 }
 
 func normalizar(s string) string {
-	if i := indexByte(s, '.'); i >= 0 {
-		entero, decimal := s[:i], s[i+1:]
-		for len(decimal) > 0 && decimal[len(decimal)-1] == '0' {
-			decimal = decimal[:len(decimal)-1]
-		}
-		if decimal == "" {
-			return entero
-		}
-		return entero + "." + decimal
+	entero, decimal, tieneComa := strings.Cut(s, ".")
+	if !tieneComa {
+		return s
 	}
-	return s
-}
-
-func indexByte(s string, b byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == b {
-			return i
-		}
+	if decimal = strings.TrimRight(decimal, "0"); decimal == "" {
+		return entero
 	}
-	return -1
+	return entero + "." + decimal
 }

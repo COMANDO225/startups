@@ -11,7 +11,7 @@ Monorepo de productos SaaS para el mercado peruano.
 
 | Carpeta | Qué es | Estado |
 |---|---|---|
-| [`facturacion-service/`](facturacion-service/) | Emisión de comprobantes electrónicos SUNAT. **Genérico y sin marca**: lo consumirá Tacu y después otros productos | ✅ Funciona contra SUNAT BETA |
+| [`facturacion-service/`](facturacion-service/) | Emisión de comprobantes electrónicos SUNAT. **Genérico y sin marca**: lo consumirá Tacu y después otros productos | ✅ Listo para producción, verificado contra SUNAT BETA |
 | [`tacu-project/`](tacu-project/) | **Tacu** — SaaS para restaurantes peruanos | 📋 Plan de negocio, sin código |
 
 **Nada está desplegado.** Todo corre en Docker Compose local.
@@ -37,19 +37,22 @@ clientes peruanos a comprar un back office aparte para facturar. **PANCA** y
 
 ```bash
 cd facturacion-service
+docker compose up -d
 
 # El certificado de prueba no está versionado; se genera así:
 openssl req -x509 -newkey rsa:2048 -keyout k.pem -out c.pem -days 730 -nodes \
   -subj "/C=PE/O=EMPRESA DE PRUEBA SAC/CN=20000000001"
-mkdir -p engine/certs && cat k.pem c.pem > engine/certs/certificate.pem && rm k.pem c.pem
+cat k.pem c.pem > certificate.pem && rm k.pem c.pem
 
-docker compose up -d
-
-DATABASE_URL="postgres://facturacion:facturacion@localhost:5433/facturacion?sslmode=disable" \
-  go run ./cmd/seed engine/certs/certificate.pem
+# Alta del emisor. Devuelve la api_key una sola vez.
+curl -X POST localhost:8080/v1/emisores \
+  -H 'Authorization: Bearer token-admin-desarrollo' -H 'Content-Type: application/json' \
+  -d "{\"ruc\":\"20000000001\",\"razon_social\":\"EMPRESA DE PRUEBA SAC\",
+       \"direccion\":\"AV. PRUEBA 123\",\"sol_user\":\"MODDATOS\",\"sol_pass\":\"moddatos\",
+       \"cert_pem_b64\":\"$(base64 -w0 certificate.pem)\"}"
 
 curl -X POST localhost:8080/v1/comprobantes \
-  -H 'Authorization: Bearer test-api-key' \
+  -H "Authorization: Bearer $API_KEY" \
   -H 'Idempotency-Key: venta-001' \
   -H 'Content-Type: application/json' -d @factura.json     # → 202
 ```

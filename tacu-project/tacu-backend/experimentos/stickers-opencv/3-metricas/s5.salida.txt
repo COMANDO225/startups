@@ -1,0 +1,5 @@
+banner x: 18..1578 (imagen 0..1599)  [10.5ms]
+minimo interior en x=424 valor=0.411  (media=0.643)
+valles (x0,x1): [(18, 31), (1561, 1577)]
+panel izq x18-424: 15 bandas de texto claro
+panel der x424-1578: 11 bandas de texto claro

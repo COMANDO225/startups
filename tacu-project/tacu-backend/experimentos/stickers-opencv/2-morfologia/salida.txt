@@ -1,0 +1,27 @@
+total blobs 24 -> filtrados 12
+  COLUMNA-APILADA x=416 y=804 81x210 area=14874 fill=0.87 ar=0.39
+  sticker x=816 y=303 111x76 area=8120 fill=0.96 ar=1.46
+  sticker x=807 y=584 120x77 area=7708 fill=0.83 ar=1.56
+  sticker x=1080 y=305 105x77 area=7530 fill=0.93 ar=1.36
+  sticker x=819 y=938 103x72 area=7157 fill=0.97 ar=1.43
+  sticker x=1064 y=582 102x73 area=7152 fill=0.96 ar=1.40
+  sticker x=693 y=908 103x71 area=7073 fill=0.97 ar=1.45
+  sticker x=1194 y=677 100x75 area=6824 fill=0.91 ar=1.33
+  sticker x=1119 y=937 106x77 area=6736 fill=0.83 ar=1.38
+  sticker x=1307 y=310 100x78 area=6723 fill=0.86 ar=1.28
+  sticker x=1300 y=566 99x72 area=6663 fill=0.93 ar=1.38
+  sticker x=1271 y=925 95x69 area=6164 fill=0.94 ar=1.38
+
+robustez (S_min, V_min) -> n_filtrados
+  S>=60: V90:12 V110:12 V120:12 V140:12 V160:12
+  S>=80: V90:12 V110:12 V120:12 V140:12 V160:12
+  S>=90: V90:12 V110:12 V120:12 V140:12 V160:12
+  S>=110: V90:12 V110:12 V120:12 V140:12 V160:12
+  S>=130: V90:12 V110:12 V120:12 V140:12 V160:12
+
+velocidad por resolucion (media de 30, sin decode)
+  1600x1200: 3.52ms  detecciones=12
+  800x600: 0.69ms  detecciones=12
+  400x300: 0.27ms  detecciones=10
+
+1 solo hilo, 1600x1200: 10.03ms

@@ -1,0 +1,31 @@
+# Postgres para desarrollo y para los tests de integracion.
+#
+# El puerto es 5433 y no 5432 a proposito: si ya tienes un Postgres local o el
+# de otro proyecto levantado, chocan y se pierde media hora averiguando por que
+# los tests hablan con la base equivocada.
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: tacu-db
+    environment:
+      POSTGRES_USER: tacu
+      POSTGRES_PASSWORD: tacu
+      POSTGRES_DB: tacu
+    ports:
+      - "5433:5432"
+    volumes:
+      # OJO: en Postgres 18 el volumen va en /var/lib/postgresql, NO en
+      # /var/lib/postgresql/data como en las versiones anteriores. La imagen 18
+      # detecta el montaje viejo y se niega a arrancar con un error largo que no
+      # dice "cambia esta linea".
+      - tacu-db:/var/lib/postgresql
+    healthcheck:
+      # Sin esto, `docker compose up -d` devuelve el control antes de que
+      # Postgres acepte conexiones y la primera migracion falla por carrera.
+      test: ["CMD-SHELL", "pg_isready -U tacu -d tacu"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  tacu-db:

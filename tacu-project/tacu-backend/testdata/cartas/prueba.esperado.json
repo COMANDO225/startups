@@ -1,0 +1,18 @@
+{
+  "_nota": "Carta SINTETICA (texto digital, contraste perfecto, sin fotos ni stickers). No mide lectura difícil: mide los casos raros de precio. 'desde 85' es el importante: el modelo lo convierte a 8500, que es plausible, y el cruce en Go se niega a confirmarlo. Verificada contra la imagen el 14-ago-2026.",
+  "platos": [
+    { "nombre": "Papa a la huancaína",    "centimos": 1800 },
+    { "nombre": "Causa limeña de pollo",  "centimos": 2250 },
+    { "nombre": "Anticuchos de corazón",  "centimos": 2800 },
+
+    { "nombre": "Ceviche mixto",          "centimos": 4500 },
+    { "nombre": "Lomo saltado",           "centimos": 3800 },
+    { "nombre": "Ají de gallina",         "centimos": 3200 },
+    { "nombre": "Arroz con mariscos",     "centimos": 4200 },
+    { "nombre": "Parrilla familiar",      "centimos": 8500 },
+
+    { "nombre": "Chicha morada (jarra)",  "centimos": 1500 },
+    { "nombre": "Inca Kola 500ml",        "centimos": 700 },
+    { "nombre": "Pisco sour",             "centimos": 2400 }
+  ]
+}

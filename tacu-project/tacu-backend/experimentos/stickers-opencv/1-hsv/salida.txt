@@ -1,0 +1,27 @@
+imagen 1600x1200  read=13.7ms  proc=7.7ms
+blobs amarillos >=900px: 24
+{'x': 1296, 'y': 654, 'w': 255, 'h': 254, 'area': 32229, 'fill': np.float64(0.5), 'ar': np.float64(1.0), 'pct': np.float64(1.679)}
+{'x': 416, 'y': 804, 'w': 81, 'h': 210, 'area': 14874, 'fill': np.float64(0.87), 'ar': np.float64(0.39), 'pct': np.float64(0.775)}
+{'x': 816, 'y': 303, 'w': 111, 'h': 76, 'area': 8120, 'fill': np.float64(0.96), 'ar': np.float64(1.46), 'pct': np.float64(0.423)}
+{'x': 807, 'y': 584, 'w': 120, 'h': 77, 'area': 7708, 'fill': np.float64(0.83), 'ar': np.float64(1.56), 'pct': np.float64(0.401)}
+{'x': 1080, 'y': 305, 'w': 105, 'h': 77, 'area': 7530, 'fill': np.float64(0.93), 'ar': np.float64(1.36), 'pct': np.float64(0.392)}
+{'x': 819, 'y': 938, 'w': 103, 'h': 72, 'area': 7157, 'fill': np.float64(0.97), 'ar': np.float64(1.43), 'pct': np.float64(0.373)}
+{'x': 1064, 'y': 582, 'w': 102, 'h': 73, 'area': 7152, 'fill': np.float64(0.96), 'ar': np.float64(1.4), 'pct': np.float64(0.372)}
+{'x': 693, 'y': 908, 'w': 103, 'h': 71, 'area': 7073, 'fill': np.float64(0.97), 'ar': np.float64(1.45), 'pct': np.float64(0.368)}
+{'x': 1194, 'y': 677, 'w': 100, 'h': 75, 'area': 6824, 'fill': np.float64(0.91), 'ar': np.float64(1.33), 'pct': np.float64(0.355)}
+{'x': 1119, 'y': 937, 'w': 106, 'h': 77, 'area': 6736, 'fill': np.float64(0.83), 'ar': np.float64(1.38), 'pct': np.float64(0.351)}
+{'x': 1307, 'y': 310, 'w': 100, 'h': 78, 'area': 6723, 'fill': np.float64(0.86), 'ar': np.float64(1.28), 'pct': np.float64(0.35)}
+{'x': 1300, 'y': 566, 'w': 99, 'h': 72, 'area': 6663, 'fill': np.float64(0.93), 'ar': np.float64(1.38), 'pct': np.float64(0.347)}
+{'x': 1271, 'y': 925, 'w': 95, 'h': 69, 'area': 6164, 'fill': np.float64(0.94), 'ar': np.float64(1.38), 'pct': np.float64(0.321)}
+{'x': 1391, 'y': 906, 'w': 124, 'h': 83, 'area': 6152, 'fill': np.float64(0.6), 'ar': np.float64(1.49), 'pct': np.float64(0.32)}
+{'x': 599, 'y': 334, 'w': 107, 'h': 60, 'area': 3623, 'fill': np.float64(0.56), 'ar': np.float64(1.78), 'pct': np.float64(0.189)}
+{'x': 247, 'y': 346, 'w': 59, 'h': 50, 'area': 2094, 'fill': np.float64(0.71), 'ar': np.float64(1.18), 'pct': np.float64(0.109)}
+{'x': 393, 'y': 1101, 'w': 60, 'h': 34, 'area': 1793, 'fill': np.float64(0.88), 'ar': np.float64(1.76), 'pct': np.float64(0.093)}
+{'x': 464, 'y': 1098, 'w': 58, 'h': 35, 'area': 1638, 'fill': np.float64(0.81), 'ar': np.float64(1.66), 'pct': np.float64(0.085)}
+{'x': 322, 'y': 1103, 'w': 59, 'h': 33, 'area': 1593, 'fill': np.float64(0.82), 'ar': np.float64(1.79), 'pct': np.float64(0.083)}
+{'x': 619, 'y': 831, 'w': 44, 'h': 49, 'area': 1581, 'fill': np.float64(0.73), 'ar': np.float64(0.9), 'pct': np.float64(0.082)}
+{'x': 87, 'y': 1108, 'w': 62, 'h': 34, 'area': 1446, 'fill': np.float64(0.69), 'ar': np.float64(1.82), 'pct': np.float64(0.075)}
+{'x': 235, 'y': 1104, 'w': 56, 'h': 32, 'area': 1331, 'fill': np.float64(0.74), 'ar': np.float64(1.75), 'pct': np.float64(0.069)}
+{'x': 161, 'y': 1106, 'w': 55, 'h': 32, 'area': 1311, 'fill': np.float64(0.74), 'ar': np.float64(1.72), 'pct': np.float64(0.068)}
+{'x': 1290, 'y': 862, 'w': 39, 'h': 42, 'area': 1041, 'fill': np.float64(0.64), 'ar': np.float64(0.93), 'pct': np.float64(0.054)}
+pipeline puro: media 3.3ms  min 2.8ms  max 5.2ms

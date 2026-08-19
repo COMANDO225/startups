@@ -1,0 +1,62 @@
+"use client";
+
+import { Drawer, Modal } from "@heroui/react";
+import { useEsEscritorio } from "@/lib/pantalla";
+
+/**
+ * El mismo contenido en dos formas: modal centrado en escritorio y drawer desde
+ * abajo, con manija y arrastre, en movil.
+ *
+ * Se monta UNO SOLO, nunca los dos escondiendose con CSS: dos dialogos abiertos
+ * a la vez se pelean el foco y el lector de pantalla anuncia el que no se ve.
+ */
+export function Panel({
+  abierto,
+  onAbierto,
+  titulo,
+  descripcion,
+  children,
+}: {
+  abierto: boolean;
+  onAbierto: (v: boolean) => void;
+  titulo: string;
+  descripcion?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const escritorio = useEsEscritorio();
+
+  if (escritorio) {
+    return (
+      <Modal.Backdrop isOpen={abierto} onOpenChange={onAbierto}>
+        <Modal.Container>
+          <Modal.Dialog className="w-full sm:max-w-lg">
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>{titulo}</Modal.Heading>
+              {descripcion}
+            </Modal.Header>
+            <Modal.Body>{children}</Modal.Body>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    );
+  }
+
+  return (
+    <Drawer.Backdrop isOpen={abierto} onOpenChange={onAbierto}>
+      {/* placement bottom + Handle = arrastrar para cerrar, que es lo que hace
+          que se sienta nativo en el telefono. */}
+      <Drawer.Content placement="bottom">
+        <Drawer.Dialog className="max-h-[85dvh]">
+          <Drawer.Handle />
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Heading>{titulo}</Drawer.Heading>
+            {descripcion}
+          </Drawer.Header>
+          <Drawer.Body>{children}</Drawer.Body>
+        </Drawer.Dialog>
+      </Drawer.Content>
+    </Drawer.Backdrop>
+  );
+}

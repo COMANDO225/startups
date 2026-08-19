@@ -1,0 +1,190 @@
+# Configuracion de Tacu.
+#
+# Este archivo se versiona y NO lleva secretos: las API keys entran por variables
+# de entorno (TACU_IA__PROVEEDORES__GEMINI__API_KEY, o GEMINI_API_KEY).
+#
+# Cambiar de modelo, de proveedor o de orden se hace AQUI. Cero codigo.
+
+ia:
+  # Los proveedores disponibles. Uno sin API key se omite con aviso; si por eso
+  # una tarea se queda sin ningun modelo, el arranque falla.
+  proveedores:
+    gemini: {}
+    openai: {}
+
+  # Cadena de modelos por tarea, en orden de preferencia.
+  #
+  # Una tarea puede mezclar empresas: si Gemini responde 429, la peticion sigue
+  # en OpenAI sin que la aplicacion se entere. Trabajan para el mismo resultado.
+  #
+  # El criterio de cada eleccion:
+  #   leer_carta      ELEGIDO POR MEDICION, no por benchmark. Los benchmarks
+  #                   genericos (Roboflow Vision Evals) ponen a gemini-3.5-flash
+  #                   #1 global con 86.6% y a 3.7-flash #2 con 84.6%. Sobre
+  #                   nuestra carta real (cmd/cartabench, 3 corridas c/u):
+  #
+  #                     3.7-flash        3/3 perfectas   $0.012   11s
+  #                     3.5-flash        1/3 perfectas   $0.030   33s
+  #                                      + una corrida con 206 platos INVENTADOS
+  #                     3.5-flash-lite   1/3 perfectas   $0.008    8s
+  #                                      + solo 18/19 manuscritos detectados
+  #
+  #                   El de 84.6% le gano 3-0 al de 86.6%. Los benchmarks
+  #                   genericos no miden esta tarea.
+  #
+  #                   El eje que decide NO es la exactitud media: los tres
+  #                   aciertan casi siempre. Lo que los separa es la VARIANZA,
+  #                   o sea que tan mal fallan cuando fallan.
+  #
+  #                   Antes de cambiar este modelo: correr cmd/cartabench.
+  #   leer_fachada    Tarea facil (nombre y colores): el barato alcanza.
+  #   verificar_foto  Decision binaria: el barato alcanza.
+  #   expandir_prompt Texto corto: el barato alcanza.
+  #   organizar_carta Texto puro, sin imagen: 4x mas barato. 3.7 Flash marca 56
+  #                   en el Artificial Analysis Intelligence Index contra 52 de
+  #                   3.5 Flash, y su salida cuesta la mitad. Cada modelo donde
+  #                   gana: 3.5 LEE, 3.7 ESTRUCTURA.
+  #   generar_foto    MEDIDO el 14-ago-2026 con cmd/fotocheck, 4 imagenes por
+  #                   modelo, mismo prompt y mismo tamano final (1024x1024):
+  #
+  #                     modelo                        media    $/img    x60
+  #                     gemini/3.1-flash-lite-image     4.2 s  $0.0336  $2.02
+  #                     gemini/3.1-flash-image          9.6 s  $0.0670  $4.02
+  #                     openai/gpt-image-2 medium      48.8 s  $0.0530  $3.18
+  #
+  #                   Lite gana en las tres dimensiones y es el unico que entra
+  #                   en el presupuesto de $3.00 por importacion. gpt-image-2
+  #                   ademas es erratico: 16.7 s en una corrida suelta y nunca
+  #                   menos de 46 s en las cuatro medidas, lo que hace imposible
+  #                   decirle al dueno cuanto falta.
+  #
+  #                   Antes de cambiar este modelo: correr cmd/fotocheck.
+  #                   El respaldo NO es para "se cayo Google" sino para "este
+  #                   plato no se parece": mismo proveedor, mas capacidad.
+  #   generar_logo    Solo OpenAI: es el que probamos y el que mejor redibuja.
+  tareas:
+    # gpt-5.6-luna NO es respaldo valido: extraccion 81.4, razonamiento 55.0.
+    # Es el modelo barato que se confunde. El respaldo sube de gama, no baja.
+    leer_carta:      [gemini/gemini-3.7-flash, gemini/gemini-3.5-flash]
+    leer_fachada:    [gemini/gemini-3.5-flash-lite]
+    verificar_foto:  [gemini/gemini-3.5-flash-lite]
+    expandir_prompt: [gemini/gemini-3.5-flash-lite]
+    organizar_carta: [gemini/gemini-3.7-flash]
+
+    # conocer_platos es texto puro y ESTRUCTURA, como organizar_carta: decide si
+    # un nombre comercial es un plato que ya esta en el banco y, si no lo es, lo
+    # describe. Misma cadena por el mismo motivo: 3.7 estructura mejor.
+    #
+    # Va APARTE de leer_carta a proposito: asi se puede volver a correr sobre una
+    # carta ya leida cuando el banco crezca, sin pagar otra vez la extraccion, y
+    # sin tocar un camino ya medido.
+    conocer_platos:  [gemini/gemini-3.7-flash]
+    generar_foto:    [gemini/gemini-3.1-flash-lite-image, gemini/gemini-3.1-flash-image]
+    generar_logo:    [openai/gpt-image-2]
+
+  # Tarifas por modelo. Son un ESTIMADO LOCAL: no se le envian al proveedor ni
+  # limitan lo que cobra. Sirven para saber cuanto costo importar la carta de UN
+  # restaurante, que es lo que la factura mensual agregada no dice.
+  #
+  # vigente_hasta convierte una tarifa que caduca en un test que falla ese dia,
+  # en vez de en numeros que mienten sin avisar.
+  precios:
+    gemini/gemini-3.7-flash:
+      # Promocional. Desde el 1-ene-2027 pasa a 1.50 / 7.50: el DOBLE.
+      entrada_por_millon: 0.75
+      salida_por_millon: 3.75
+      vigente_hasta: "2026-12-31"
+    gemini/gemini-3.5-flash:
+      entrada_por_millon: 1.50
+      salida_por_millon: 9.00
+    gemini/gemini-3.1-pro:
+      entrada_por_millon: 2.00
+      salida_por_millon: 12.00
+    gemini/gemini-3.5-flash-lite:
+      entrada_por_millon: 0.30
+      salida_por_millon: 2.50
+    # Verificado contra la documentacion de Google el 14-ago-2026.
+    gemini/gemini-3.1-flash-lite-image:
+      # El mas barato de los dos proveedores a 1K, que es justo el tamano de una
+      # tarjeta de catalogo en movil. Google lo da como reemplazo de
+      # gemini-2.5-flash-image, que se apaga el 2-oct-2026.
+      por_imagen: 0.0336
+    gemini/gemini-3.1-flash-image:
+      # 72% MAS CARO que el 2.5 viejo a la misma resolucion, no mas barato.
+      # Sirve de respaldo para reintentar platos sueltos, no para cartas enteras:
+      # 60 platos serian $4.02 y el presupuesto es $3.00.
+      por_imagen: 0.067
+    openai/gpt-5.6-luna:
+      entrada_por_millon: 0.20
+      salida_por_millon: 1.20
+    openai/gpt-image-2:
+      # OJO: gpt-image-2 factura por TOKENS, que escalan con la resolucion Y con
+      # la calidad. Este numero es medium 1024x1024, que es el tamano de catalogo.
+      # Las otras combinaciones se desvian MUCHO: low 1024x1024 son $0.006 (9x mas
+      # barato) y high 1536x1024 son $0.165 (3x mas caro).
+      #
+      # Un solo por_imagen NO puede representar eso. Mientras el producto use una
+      # sola combinacion el estimado sirve; el dia que se ofrezcan dos calidades,
+      # esta tabla tiene que dejar de ser plana. Ya me equivoque una vez por esto:
+      # tenia cargado el precio de 1536x1024 y estaba midiendo a 1024x1024.
+      por_imagen: 0.053
+
+  # Tope de gasto por operacion. Importar una carta no puede costar mas que esto
+  # aunque el modelo se descontrole generando.
+  presupuesto_por_importacion_usd: 3.00
+
+  # Peticiones simultaneas por proveedor. Los limites reales son por proyecto, no
+  # por modelo, asi que el tope va aca.
+  #
+  # 8 workers son 114 fotos/min. La cuenta esta en Tier 2, donde el techo es ~500
+  # RPM y $200 por ventana de 10 minutos: sobra un factor de cuatro. Con Tier 1
+  # ($10/10min = ~29 fotos/min) este numero tendria que ser 2.
+  #
+  # Va de la mano del techo POR RESTAURANTE del worker de fotos, que es 4: con
+  # 8 workers y techo 4, un restaurante solo usa la mitad de la capacidad y hace
+  # sus 60 fotos en ~63 s, y dos restaurantes a la vez van los dos a full sin
+  # esperarse. Si se sube esto, hay que revisar aquel.
+  #
+  # NO MEDIDO: el IPM (imagenes por minuto) existe como metrica documentada de
+  # estos modelos y Google no publica el numero en ningun tier. Es el unico
+  # limite que podria morder por debajo de 114/min.
+  max_concurrencia_por_proveedor: 8
+
+# --- base de datos ---
+bd:
+  # El DSN NO va aqui: es una credencial y entra por TACU_BD_DSN.
+  # En desarrollo, el de compose.yaml:
+  #   postgres://tacu:tacu@localhost:5433/tacu?sslmode=disable
+  max_conexiones: 10
+
+# --- servidor ---
+servidor:
+  puerto: 8080
+
+  # Los origenes del navegador que pueden llamar a la API. En desarrollo el
+  # frontend corre en otro puerto, y sin esto el navegador bloquea todo con un
+  # "Failed to fetch" que no dice CORS por ningun lado.
+  #
+  # Lista explicita y NO "*": con comodin el navegador se niega a mandar la
+  # cabecera Authorization, que es la que lleva el token del borrador.
+  origenes_permitidos:
+    - http://localhost:3000
+
+  # Cuatro fotos de carta a 10 MB. Sin tope, una peticion agota la memoria.
+  tamano_max_subida_mb: 40
+
+  # En false, POST /v1/importaciones encola la lectura y responde en
+  # milisegundos: el frontend pinta esqueletos y consulta el estado hasta que
+  # pase a "lista". Es el camino normal.
+  #
+  # En true la peticion espera los ~10 s de la lectura. Se conserva para
+  # ejercitar el flujo entero en una sola peticion cuando no hay cola levantada:
+  # un test, depurar un prompt, una maquina sin Postgres.
+  leer_carta_sincrono: false
+
+# --- almacen de imagenes ---
+almacen:
+  # Disco para el demo. Mudarse a R2 es un struct nuevo con Guardar y URL: la
+  # base guarda CLAVES, no URLs, justamente para que ese cambio no toque datos.
+  raiz: ./datos/media
+  base: /media

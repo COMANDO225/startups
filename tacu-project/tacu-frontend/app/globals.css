@@ -1,0 +1,22 @@
+/* EL ORDEN IMPORTA: tailwindcss SIEMPRE primero, dice la doc de HeroUI. */
+@import "tailwindcss";
+@import "@heroui/styles";
+
+@theme {
+  /* Los dos niveles de aviso, para que nadie los mezcle por accidente:
+     bloquea -> rojo; solo confirmar -> ambar suave. */
+  --color-bloquea: oklch(0.58 0.19 25);
+  --color-confirmar: oklch(0.75 0.12 75);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* En movil, un input de menos de 16px hace que Safari haga zoom al enfocarlo y
+   el dueno pierde de vista la carta mientras corrige precios. */
+input,
+select,
+textarea {
+  font-size: max(1rem, 16px);
+}

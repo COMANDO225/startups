@@ -1,0 +1,23 @@
+# LISTA BLANCA: se excluye todo y despues se deja entrar solo lo necesario.
+#
+# Docker NO lee el .gitignore. Con una lista negra, cada archivo nuevo entra a la
+# imagen por defecto y basta olvidar una linea para que .env viaje dentro de una
+# capa: una clave de Gemini publicada en cada registro donde se suba la imagen, y
+# borrarla del Dockerfile despues no la saca de la capa. Empezando por "*" el
+# olvido tiene el signo correcto: falla la compilacion, no se filtra la clave.
+*
+
+# Lo unico que la compilacion necesita.
+!go.mod
+!go.sum
+!cmd
+!internal
+
+# config.yaml se versiona y no lleva secretos a proposito (las claves entran por
+# variables de entorno), asi que puede viajar en la imagen: sin el, el binario no
+# arranca porque no sabe que modelo usar.
+!config
+
+# Que NO entra, y por que: .env y .env.example (claves), sql/migrations (goose se
+# corre aparte, el binario no migra), testdata (fotos de restaurantes reales),
+# experimentos, datos (media local), bin y tmp (artefactos de la maquina).

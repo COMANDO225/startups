@@ -1,0 +1,38 @@
+# Secretos. Esta regla NO se hereda del repo padre: si tacu-project/ se separa
+# algun dia, el .gitignore de arriba desaparece en silencio.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Artefactos
+bin/
+tmp/
+*.log
+
+# Las FOTOS de las cartas son de restaurantes reales y no se versionan. Las
+# verdades de referencia si: son trabajo verificado a mano, y sin ellas un clon
+# nuevo no puede correr cmd/cartabench ni reproducir ningun numero.
+testdata/cartas/**
+!testdata/cartas/**/
+!testdata/cartas/**/esperado.json
+!testdata/cartas/**/*.esperado.json
+
+# Los experimentos versionan su README con los numeros medidos, nunca las
+# imagenes: las visualizaciones son la foto del restaurante con recuadros encima,
+# y las fotos generadas son blobs pesados que se pueden volver a generar corriendo
+# el comando que el README documenta.
+experimentos/**/*.png
+experimentos/**/*.jpg
+experimentos/**/*.jpeg
+experimentos/**/*.webp
+
+# El almacen local: son las FOTOS DE CARTAS DE RESTAURANTES REALES que el dueno
+# subio, y las fotos generadas a partir de ellas. Ni unas ni otras se versionan.
+#
+# La regla de testdata/ de arriba no cubria esto y las 149 imagenes de datos/
+# entraban al primer "git add". Se ignora la carpeta entera: lo que hay dentro se
+# regenera o se vuelve a subir, y nada de ahi es codigo.
+datos/

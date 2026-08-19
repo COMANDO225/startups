@@ -1,0 +1,5 @@
+oscuridad: extremo interior en x=815  val=72.9  media=112.6
+   top5: [815, 1015, 954, 1076, 1188]
+borde-vert: extremo interior en x=790  val=113.5  media=64.3
+   top5: [790, 556, 864, 1109, 405]
+pliegue real (medido a ojo en la foto): x~=805

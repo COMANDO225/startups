@@ -1,0 +1,39 @@
+version: "2"
+sql:
+  - name: carta
+    engine: postgresql
+    queries: "internal/modules/carta/adapters/postgres/queries/"
+    schema: "sql/migrations/"
+    gen:
+      go:
+        package: cartadb
+        out: "internal/modules/carta/adapters/postgres/cartadb"
+        sql_package: pgx/v5
+
+        # Sin tags json: esto es la capa de base de datos, no la de la API. Si
+        # una estructura generada se serializa directo a una respuesta HTTP, el
+        # esquema publico queda atado al esquema de la tabla y renombrar una
+        # columna rompe el frontend.
+        emit_json_tags: false
+
+        # Una lista vacia en vez de nil: "no hay platos" y "no se consulto" se
+        # comportan igual al recorrerlas.
+        emit_empty_slices: true
+
+        # Las columnas nulables salen como puntero. Son pocas a proposito —error,
+        # foto_clave y foto_origen se dejaron NOT NULL DEFAULT '' justamente para
+        # no llenar el codigo de punteros— asi que las que quedan son de verdad
+        # opcionales y conviene que el compilador lo recuerde.
+        emit_pointers_for_null_types: true
+
+        overrides:
+          # uuid nativo -> google/uuid. Sin esto sqlc genera pgtype.UUID, que
+          # obliga a convertir en cada frontera y a comprobar .Valid.
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              type: "UUID"
+              import: "github.com/google/uuid"
+              pointer: true

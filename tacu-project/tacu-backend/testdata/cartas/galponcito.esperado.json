@@ -1,0 +1,58 @@
+{
+  "_nota": "Verdad de referencia de galponcito.jpeg, verificada a mano contra la foto el 14-ago-2026. 42 platos. El aviso grande dice \"2 X 1\" y en letra chica \"2 pollos + papas + ensalada (Martes y Jueves)\": el NOMBRE es el titulo destacado, el resto es descripcion. La identidad de un plato es (nombre, precio): '1/4 pollo' aparece dos veces a precios distintos porque la carta cobra distinto en mesa y para llevar, y eso NO es un error. 'manuscrito' marca los 19 precios que estan en stickers amarillos pegados encima del precio impreso.",
+  "platos": [
+    { "nombre": "Porción de papas",            "centimos": 1200,  "manuscrito": false },
+    { "nombre": "1/2 porción de papas",        "centimos": 800,   "manuscrito": false },
+    { "nombre": "Porción ensalada",            "centimos": 500,   "manuscrito": false },
+    { "nombre": "1/2 Porción ensalada",        "centimos": 300,   "manuscrito": false },
+    { "nombre": "chaufa de pollo",             "centimos": 1200,  "manuscrito": false },
+    { "nombre": "chaufa de carne",             "centimos": 1300,  "manuscrito": false },
+
+    { "nombre": "1/4 pollo",                   "centimos": 1100,  "manuscrito": false },
+    { "nombre": "Mostro",                      "centimos": 1300,  "manuscrito": false },
+    { "nombre": "Mostrito",                    "centimos": 900,   "manuscrito": false },
+    { "nombre": "1/8 pollo",                   "centimos": 800,   "manuscrito": false },
+    { "nombre": "Broaster + Chaufa",           "centimos": 1000,  "manuscrito": false },
+    { "nombre": "Broaster",                    "centimos": 900,   "manuscrito": false },
+
+    { "nombre": "1/4 pollo",                   "centimos": 1300,  "manuscrito": true },
+    { "nombre": "Mostro",                      "centimos": 1400,  "manuscrito": true },
+    { "nombre": "Mostrito",                    "centimos": 1100,  "manuscrito": true },
+    { "nombre": "1/8 pollo",                   "centimos": 1100,  "manuscrito": true },
+    { "nombre": "1/2 pollo",                   "centimos": 2300,  "manuscrito": true },
+    { "nombre": "1 pollo",                     "centimos": 4300,  "manuscrito": true },
+
+    { "nombre": "Agua de mesa",                "centimos": 200,   "manuscrito": false },
+    { "nombre": "Personal",                    "centimos": 300,   "manuscrito": false },
+    { "nombre": "Personal descartable",        "centimos": 400,   "manuscrito": false },
+    { "nombre": "Gordita",                     "centimos": 600,   "manuscrito": false },
+    { "nombre": "Litro",                       "centimos": 800,   "manuscrito": false },
+    { "nombre": "1 1/2 C.I.",                  "centimos": 1000,  "manuscrito": false },
+    { "nombre": "1 1/2 P.S.",                  "centimos": 900,   "manuscrito": false },
+    { "nombre": "Inca o Coca cola 3L.",        "centimos": 1500,  "manuscrito": false },
+    { "nombre": "Cerveza Pilsen",              "centimos": 900,   "manuscrito": false },
+    { "nombre": "Cerveza negra",               "centimos": 1000,  "manuscrito": false },
+    { "nombre": "Trigo",                       "centimos": 1000,  "manuscrito": false },
+
+    { "nombre": "2 X 1",                       "centimos": 6700,  "manuscrito": true },
+
+    { "nombre": "COMBO 1",                     "centimos": 4900,  "manuscrito": true },
+    { "nombre": "COMBO 2",                     "centimos": 4900,  "manuscrito": true },
+    { "nombre": "COMBO 3",                     "centimos": 5400,  "manuscrito": true },
+    { "nombre": "COMBO 4",                     "centimos": 5900,  "manuscrito": true },
+    { "nombre": "COMBO 5",                     "centimos": 6400,  "manuscrito": true },
+    { "nombre": "COMBO 6",                     "centimos": 7600,  "manuscrito": true },
+    { "nombre": "COMBO GALPONCITO",            "centimos": 5500,  "manuscrito": true },
+    { "nombre": "COMBO FAMILIAR",              "centimos": 10300, "manuscrito": true },
+
+    { "nombre": "Broaster",                    "centimos": 1100,  "manuscrito": true },
+    { "nombre": "Broaster+Chaufa",             "centimos": 1200,  "manuscrito": true },
+    { "nombre": "Salchipapa",                  "centimos": 800,   "manuscrito": true },
+    { "nombre": "Nuggets",                     "centimos": 1000,  "manuscrito": true }
+  ],
+
+  "_combos_con_contenido": [
+    "COMBO 1", "COMBO 2", "COMBO 3", "COMBO 4", "COMBO 5", "COMBO 6",
+    "COMBO GALPONCITO", "COMBO FAMILIAR", "2 X 1"
+  ]
+}

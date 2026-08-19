@@ -1,0 +1,74 @@
+# La misma puerta que en local: "make revisar".
+#
+# Que el CI no tenga su propia lista de comandos es a proposito. Si aqui se
+# escribieran "go vet" y "go test" a mano, el dia que el Makefile gane un paso el
+# CI dejaria de comprobarlo sin que nadie se entere, y "en mi maquina pasa"
+# vuelve a ser una frase posible.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un push nuevo cancela la corrida anterior de la misma rama: nadie espera el
+# resultado de un commit que ya fue reemplazado.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: tacu
+          POSTGRES_PASSWORD: tacu
+          POSTGRES_DB: tacu
+        ports:
+          # 5433 en el runner, igual que en compose.yaml, para que el DSN por
+          # defecto del Makefile valga tal cual y no haya un segundo DSN que
+          # mantener sincronizado.
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U tacu -d tacu"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
+        with:
+          # La version sale de go.mod: una sola fuente de verdad.
+          go-version-file: go.mod
+          # Cachea modulos y objetos compilados. Importa mas de lo normal aqui
+          # porque golangci-lint entra por "go run ...@latest" y sin cache hay
+          # que compilarlo entero en cada corrida.
+          cache: true
+
+      - name: Migraciones
+        run: make migrar
+
+      # NO se define TACU_E2E ni se pasa ninguna clave de IA: los tests que
+      # llaman a Gemini se saltan solos y el CI no puede generar factura. Si
+      # algun dia hacen falta credenciales aqui, que sea una decision explicita
+      # y no el efecto secundario de agregar un secreto al repositorio.
+      - name: Revisar (formato, vet, lint, tests)
+        run: make revisar
+
+  imagen:
+    # Separado de revisar: que la imagen compile no depende de que los tests
+    # pasen, y saberlo por separado dice antes que se rompio.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Sin push a ningun registro: aqui solo se comprueba que el Dockerfile y
+      # la lista blanca de .dockerignore siguen siendo suficientes para compilar.
+      - name: Compilar la imagen
+        run: docker build -t tacu-api:${{ github.sha }} .

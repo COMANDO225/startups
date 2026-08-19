@@ -1,0 +1,9 @@
+minAreaRect, base: 12
+  rot -12: 12
+  rot -8: 12
+  rot -4: 12
+  rot +0: 12
+  rot +4: 12
+  rot +8: 12
+  rot +12: 12
+tiempo minAreaRect (incl cvtColor): 2.11ms

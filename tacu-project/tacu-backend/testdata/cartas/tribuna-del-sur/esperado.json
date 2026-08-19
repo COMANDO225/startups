@@ -1,0 +1,316 @@
+{
+  "_nota": "La Tribuna del Sur, cevicheria en Ate. DOS fotos (1.jpeg pagina de platos, 2.jpeg pagina de bebidas), tomadas a mano, sobre fondo de madera con una marca de agua de pez detras del texto. 74 platos impresos; esta lista tiene 77 lineas porque los 3 TRIOS de doble precio se cuentan una vez por precio. Ningun precio manuscrito. Verificada a mano contra las fotos el 14-ago-2026.",
+  "_trios": "La seccion TRIOS tiene DOS columnas de precio sin encabezado: S/45 y S/80. La carta no dice de que es cada una. No se adivina: el plato sale marcado para que el dueno le ponga nombre.",
+  "platos": [
+    {
+      "nombre": "Ceviche a la Tribuna",
+      "centimos": 3500
+    },
+    {
+      "nombre": "Ceviche de Pescado",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Ceviche a la Crema",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Ceviche Mixto",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Ceviche de Conchas Negras",
+      "centimos": 3500
+    },
+    {
+      "nombre": "Tiradito a la Tribuna",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Tiradito a la Bandera",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Tiradito Tricolor",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Tiradito Natural",
+      "centimos": 2800
+    },
+    {
+      "nombre": "Pulpo al Olivo",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Ensalada de Mariscos",
+      "centimos": 2500
+    },
+    {
+      "nombre": "Tequeños de Pulpa de Cangrejo",
+      "centimos": 1500
+    },
+    {
+      "nombre": "Tequeños de Langostinos (1/2 doc.)",
+      "centimos": 1200
+    },
+    {
+      "nombre": "Tequeños de Queso (1/2 doc.)",
+      "centimos": 1200
+    },
+    {
+      "nombre": "Conchas a la Parmesana (1/2 doc.)",
+      "centimos": 2000
+    },
+    {
+      "nombre": "Causa acevichada",
+      "centimos": 3500
+    },
+    {
+      "nombre": "Causa de Langostino",
+      "centimos": 2500
+    },
+    {
+      "nombre": "Causa de Pulpa de Cangrejo",
+      "centimos": 2500
+    },
+    {
+      "nombre": "Causa de Pollo",
+      "centimos": 2000
+    },
+    {
+      "nombre": "Choritos a la Chalaca",
+      "centimos": 2000
+    },
+    {
+      "nombre": "Leche de Tigre",
+      "centimos": 2000
+    },
+    {
+      "nombre": "Leche de Tigre a la Tribuna",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Leche de Pantera",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Ceviche + Chicharrón de Pescado",
+      "centimos": 4000
+    },
+    {
+      "nombre": "Ceviche + Chicharrón Mixto",
+      "centimos": 4000
+    },
+    {
+      "nombre": "Ceviche + Chaufa de Mariscos",
+      "centimos": 4000
+    },
+    {
+      "nombre": "Ceviche + Arroz c/ Mariscos",
+      "centimos": 4000
+    },
+    {
+      "nombre": "Ceviche + Chicharrón de Calamar",
+      "centimos": 4300
+    },
+    {
+      "nombre": "Ceviche + Arroz c/ Mariscos + Chicharrón Mixto",
+      "centimos": 4500
+    },
+    {
+      "nombre": "Ceviche + Arroz c/ Mariscos + Chicharrón Mixto",
+      "centimos": 8000
+    },
+    {
+      "nombre": "Ceviche + Chaufa de Mariscos + Chicharrón de Pescado",
+      "centimos": 4500
+    },
+    {
+      "nombre": "Ceviche + Chaufa de Mariscos + Chicharrón de Pescado",
+      "centimos": 8000
+    },
+    {
+      "nombre": "Ceviche + Chicharrón de Calamar + Arroz c/ Mariscos",
+      "centimos": 4800
+    },
+    {
+      "nombre": "Ceviche + Chicharrón de Calamar + Arroz c/ Mariscos",
+      "centimos": 8000
+    },
+    {
+      "nombre": "Ronda Marina",
+      "centimos": 7500
+    },
+    {
+      "nombre": "Chicharrón de Pescado",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Chicharrón Mixto",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Chicharrón de Calamar",
+      "centimos": 3500
+    },
+    {
+      "nombre": "Jalea Mixta",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Jalea de Pescado",
+      "centimos": 3000
+    },
+    {
+      "nombre": "Chicharrón de Langostino",
+      "centimos": 3500
+    },
+    {
+      "nombre": "Chicharrón de Camarón",
+      "centimos": 4000
+    },
+    {
+      "nombre": "Chita Frita",
+      "centimos": 4500
+    },
+    {
+      "nombre": "Chita a lo Macho",
+      "centimos": 4800
+    },
+    {
+      "nombre": "Fuente de Ceviche",
+      "centimos": 8000
+    },
+    {
+      "nombre": "Fuente de Ceviche Mixto",
+      "centimos": 8500
+    },
+    {
+      "nombre": "Fuente de Chicharrón de Pescado",
+      "centimos": 8000
+    },
+    {
+      "nombre": "Fuente de Chicharrón Mixto",
+      "centimos": 8500
+    },
+    {
+      "nombre": "Fuente de Chicharrón de Calamar",
+      "centimos": 8800
+    },
+    {
+      "nombre": "Fuente de Jalea de Pescado",
+      "centimos": 8000
+    },
+    {
+      "nombre": "Fuente de Jalea Mixta",
+      "centimos": 8500
+    },
+    {
+      "nombre": "Fuente de Tiradito Bandera",
+      "centimos": 6000
+    },
+    {
+      "nombre": "Fuente de Arroz C/ Marisco",
+      "centimos": 6000
+    },
+    {
+      "nombre": "Fuente de Chaufa de Pescado",
+      "centimos": 6000
+    },
+    {
+      "nombre": "Surtido",
+      "centimos": 1000
+    },
+    {
+      "nombre": "Piña",
+      "centimos": 1000
+    },
+    {
+      "nombre": "Papaya",
+      "centimos": 1000
+    },
+    {
+      "nombre": "Plátanos c/ Leche",
+      "centimos": 1200
+    },
+    {
+      "nombre": "Fresa c/ Leche",
+      "centimos": 1400
+    },
+    {
+      "nombre": "Especial",
+      "centimos": 1400
+    },
+    {
+      "nombre": "Limonada (vaso)",
+      "centimos": 800
+    },
+    {
+      "nombre": "Limonada (jarra)",
+      "centimos": 1500
+    },
+    {
+      "nombre": "Limonada Frozen (jarra)",
+      "centimos": 1800
+    },
+    {
+      "nombre": "Chicha Morada (vaso)",
+      "centimos": 800
+    },
+    {
+      "nombre": "Chicha Morada (jarra)",
+      "centimos": 1500
+    },
+    {
+      "nombre": "Chicha de Jora (vaso)",
+      "centimos": 800
+    },
+    {
+      "nombre": "Chicha de Jora (jarra)",
+      "centimos": 1500
+    },
+    {
+      "nombre": "Gaseosa Personal",
+      "centimos": 400
+    },
+    {
+      "nombre": "Gaseosa Gordita",
+      "centimos": 600
+    },
+    {
+      "nombre": "Gaseosa 1L.",
+      "centimos": 900
+    },
+    {
+      "nombre": "Gaseosa 1 1/2 L.",
+      "centimos": 1100
+    },
+    {
+      "nombre": "Café",
+      "centimos": 400
+    },
+    {
+      "nombre": "Infusiones (té, anís ó manzanilla)",
+      "centimos": 400
+    },
+    {
+      "nombre": "Pilsen Lata de 355 ml",
+      "centimos": 700
+    },
+    {
+      "nombre": "Cuzqueña Botella de 330 ml",
+      "centimos": 800
+    },
+    {
+      "nombre": "Pilsen/Cristal 630 ml",
+      "centimos": 1000
+    },
+    {
+      "nombre": "Cusqueña Negra",
+      "centimos": 1400
+    }
+  ],
+  "_combos_con_contenido": [],
+  "_etiquetas": "Lo que la carta pone entre parentesis junto al nombre es parte del NOMBRE: '(1/2 doc.)' en tres piqueos, '(vaso)'/'(jarra)' en las bebidas. La etiqueta del precio se reserva para el caso inequivoco de UNA fila con VARIOS montos, que aqui es solo TRIOS."
+}

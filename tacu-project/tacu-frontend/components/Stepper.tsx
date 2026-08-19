@@ -1,20 +1,19 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Chip } from "@heroui/react";
 import { Check, Lock } from "lucide-react";
 import type { Seccion } from "@/lib/flujo";
 
 /**
- * El eje del flujo: las secciones colgando de una linea vertical, y la abierta
- * despliega sus sub-pasos.
+ * El eje del flujo dentro del rail oscuro: las secciones colgando de una linea
+ * vertical, y la abierta despliega sus sub-pasos.
  *
- * NO usa Button de HeroUI a proposito. Un boton con variante pinta un fondo por
- * fila, y siete fondos apilados tapan la linea — que es justo lo unico que dice
- * que esto es un recorrido y no una lista de enlaces.
+ * NO usa un boton con variante a proposito. Un fondo por fila, siete apilados,
+ * tapa la linea — que es justo lo unico que dice que esto es un recorrido y no
+ * una lista de enlaces. La seccion activa si recibe fondo, y por eso se nota.
  *
- * Las medidas estan atadas entre si: la fila mide 36 px, asi que el centro del
- * circulo cae a 18, y de ahi salen el `top` del tramo y el `-bottom` que lo
+ * Las medidas estan atadas entre si: la fila mide 34 px, asi que el centro del
+ * circulo cae a 17, y de ahi salen el `top` del tramo y el `-bottom` que lo
  * estira hasta el centro del circulo siguiente. Cambiar la altura de la fila
  * obliga a cambiar las tres.
  */
@@ -30,54 +29,61 @@ export function Stepper({
   onIr: (seccion: string, sub?: string) => void;
 }) {
   return (
-    <nav aria-label="Pasos" className="flex flex-col">
+    <nav aria-label="Pasos" className="flex flex-col gap-1">
       {secciones.map((s, i) => {
         const activa = s.id === seccion;
         const ultima = i === secciones.length - 1;
+        // El numero se convierte en un visto cuando ya esta hecha Y no estamos
+        // en ella: dentro de la seccion, el numero sigue diciendo donde estas.
+        const hecha = s.listo && !activa;
 
         return (
           <div key={s.id} className="relative">
             {!ultima && (
               <span
                 aria-hidden
-                className={`absolute start-[13px] top-[18px] -bottom-[18px] w-0.5 rounded-full transition-colors duration-500 ${
-                  s.listo ? "bg-accent" : "bg-default"
+                className={`absolute start-[16px] top-[17px] -bottom-[9px] w-px transition-colors duration-500 ${
+                  s.listo ? "bg-accent/45" : "bg-white/10"
                 }`}
               />
             )}
 
             <button
               aria-current={activa ? "step" : undefined}
-              className="group relative flex h-9 w-full items-center gap-3 rounded-lg text-start outline-offset-2 outline-accent focus-visible:outline-2 disabled:cursor-not-allowed"
+              className={`relative flex h-[34px] w-full items-center gap-[11px] rounded-full px-[3px] text-start outline-offset-2 outline-accent transition-colors focus-visible:outline-2 disabled:cursor-not-allowed ${
+                activa ? "bg-white/10" : ""
+              }`}
               disabled={s.bloqueada}
               type="button"
               onClick={() => onIr(s.id)}
             >
-              <motion.span
-                animate={{ scale: activa ? 1 : 0.9 }}
-                className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold transition-colors duration-300 ${
-                  s.listo || activa
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-default text-muted"
-                } ${activa ? "ring-4 ring-accent/15" : ""}`}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              <span
+                className={`grid size-[26px] shrink-0 place-items-center rounded-full font-display text-[12.5px] font-semibold transition-colors duration-300 ${
+                  activa
+                    ? "bg-accent text-tinta"
+                    : s.listo
+                      ? "bg-accent/25 text-accent"
+                      : s.bloqueada
+                        ? "bg-white/[0.07] text-white/30"
+                        : "bg-white/10 text-white/60"
+                }`}
               >
                 {s.bloqueada ? (
                   <Lock className="size-3" />
-                ) : s.listo ? (
-                  <Check className="size-4" />
+                ) : hecha ? (
+                  <Check className="size-3.5" />
                 ) : (
                   s.num
                 )}
-              </motion.span>
+              </span>
 
               <span
-                className={`min-w-0 truncate text-sm transition-colors ${
+                className={`min-w-0 flex-1 truncate text-[13.5px] transition-colors ${
                   activa
-                    ? "font-semibold text-foreground"
+                    ? "font-semibold text-white"
                     : s.bloqueada
-                      ? "text-muted"
-                      : "text-muted group-hover:text-foreground"
+                      ? "font-medium text-white/30"
+                      : "font-medium text-white/60"
                 }`}
               >
                 {s.titulo}
@@ -98,47 +104,40 @@ export function Stepper({
                     return (
                       <li key={sb.id}>
                         <button
-                          aria-current={aqui ? "page" : undefined}
-                          className="group flex h-8 w-full items-center gap-3 rounded-lg text-start outline-offset-2 outline-accent focus-visible:outline-2"
+                          className="flex w-full items-center gap-[11px] py-[7px] ps-[3px] text-start outline-offset-2 outline-accent focus-visible:outline-2"
                           type="button"
                           onClick={() => onIr(s.id, sb.id)}
                         >
-                          {/* relative: el tramo de linea esta posicionado y sin
-                              esto se pinta ENCIMA del punto, partiendolo en dos. */}
-                          <span className="relative grid size-7 shrink-0 place-items-center">
+                          <span className="grid size-[26px] shrink-0 place-items-center">
                             <span
-                              className={`size-2.5 rounded-full transition-colors ${
+                              className={`size-[7px] rounded-full transition-[background-color,transform] duration-300 ${
                                 sb.ocupado
-                                  ? "animate-pulse bg-accent"
-                                  : sb.listo || aqui
-                                    ? "bg-accent"
-                                    : "bg-default ring-2 ring-inset ring-muted/40"
+                                  ? "anima-late bg-accent"
+                                  : aqui
+                                    ? "scale-[1.15] bg-accent"
+                                    : sb.listo
+                                      ? "bg-accent/45"
+                                      : "bg-white/25"
                               }`}
                             />
                           </span>
-
                           <span
-                            className={`min-w-0 truncate text-sm transition-colors ${
-                              aqui
-                                ? "font-medium text-foreground"
-                                : "text-muted group-hover:text-foreground"
+                            className={`min-w-0 flex-1 truncate text-[12.5px] transition-colors ${
+                              aqui ? "font-medium text-white" : "text-white/55"
                             }`}
                           >
                             {sb.label}
                           </span>
-
-                          {/* Chip y no Badge: Badge es un adorno POSICIONADO
-                              sobre otro elemento y suelto se va flotando a la
-                              esquina. Lo dice su propia doc. */}
                           {sb.tag && (
-                            <Chip
-                              className="ms-auto shrink-0 tabular-nums"
-                              color={sb.rojo ? "danger" : "default"}
-                              size="sm"
-                              variant={sb.rojo ? "primary" : "soft"}
+                            <span
+                              className={`shrink-0 rounded-full px-[7px] py-[4px] font-display text-[10.5px] font-medium leading-none ${
+                                sb.rojo
+                                  ? "bg-bloquea text-white"
+                                  : "bg-white/[0.12] text-white/60"
+                              }`}
                             >
                               {sb.tag}
-                            </Chip>
+                            </span>
                           )}
                         </button>
                       </li>

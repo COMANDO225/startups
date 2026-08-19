@@ -1,10 +1,12 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { Alert, Button, Card } from "@heroui/react";
 import { Check, ExternalLink } from "lucide-react";
 import { API, publicarCarta, urlMedia } from "@/lib/api";
 import type { Importacion } from "@/lib/tipos";
+import { Aviso } from "./ui/Aviso";
+import { Boton } from "./ui/Boton";
+import { Ficha } from "./ui/Ficha";
 
 /**
  * El ultimo paso: como lo vera el cliente, y el boton que da la URL.
@@ -14,7 +16,9 @@ import type { Importacion } from "@/lib/tipos";
  * equivocada de lo que el cliente va a ver.
  */
 export function VistaPublicar({ importacion }: { importacion: Importacion }) {
-  const publicar = useMutation({ mutationFn: () => publicarCarta(importacion.id) });
+  const publicar = useMutation({
+    mutationFn: () => publicarCarta(importacion.id),
+  });
 
   const slug = publicar.data?.slug ?? importacion.restaurante.slug;
   const ruta = slug ? `${API}/v1/r/${slug}` : null;
@@ -24,7 +28,9 @@ export function VistaPublicar({ importacion }: { importacion: Importacion }) {
   return (
     <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 py-4">
       <div className="text-center">
-        <h2 className="text-lg font-semibold">Asi lo vera tu cliente</h2>
+        <h2 className="font-display text-lg font-semibold leading-[1.2] tracking-[-0.02em]">
+          Asi lo vera tu cliente
+        </h2>
         <p className="text-sm text-muted">
           La carta se abre en el telefono, sin instalar nada.
         </p>
@@ -66,24 +72,18 @@ export function VistaPublicar({ importacion }: { importacion: Importacion }) {
         </div>
       </div>
 
-      <Card className="w-full" variant="secondary">
-        <Card.Content className="gap-3">
-          <p className="text-sm text-muted">
+      <Ficha className="w-full p-4">
+        <div>
+          <p className="text-[13.5px] text-tenue">
             {platos.length} platos ·{" "}
             {platos.filter((p) => p.foto?.estado === "lista").length} con foto
           </p>
 
           {publicada && ruta ? (
             <div className="flex flex-col gap-2">
-              <Alert status="success">
-                <Alert.Indicator />
-                <Alert.Content>
-                  <Alert.Title>Tu carta esta publicada</Alert.Title>
-                  <Alert.Description>
-                    Comparte este enlace por WhatsApp o ponlo en un QR.
-                  </Alert.Description>
-                </Alert.Content>
-              </Alert>
+              <Aviso tono="neutro" titulo={<>Tu carta esta publicada</>}>
+                Comparte este enlace por WhatsApp o ponlo en un QR.
+              </Aviso>
               <a
                 className="flex items-center gap-2 rounded-lg border border-default px-3 py-2 font-mono text-sm break-all"
                 href={ruta}
@@ -97,31 +97,28 @@ export function VistaPublicar({ importacion }: { importacion: Importacion }) {
           ) : (
             <>
               {!importacion.puede_publicarse && (
-                <Alert status="warning">
-                  <Alert.Indicator />
-                  <Alert.Content>
-                    <Alert.Description>
-                      Quedan {importacion.marcas.revisar} platos por corregir en
-                      el paso Datos.
-                    </Alert.Description>
-                  </Alert.Content>
-                </Alert>
+                <Aviso tono="confirmar">
+                  Quedan {importacion.marcas.revisar} platos por corregir en el
+                  paso Tu catálogo.
+                </Aviso>
               )}
               {publicar.error && (
                 <p className="text-sm text-bloquea">{publicar.error.message}</p>
               )}
-              <Button
-                isDisabled={!importacion.puede_publicarse || publicar.isPending}
-                size="lg"
-                onPress={() => publicar.mutate()}
+              <Boton
+                disabled={!importacion.puede_publicarse || publicar.isPending}
+                ancho
+                tamano="lg"
+                variante="amarillo"
+                onClick={() => publicar.mutate()}
               >
                 <Check className="size-4" />
                 {publicar.isPending ? "Publicando..." : "Publicar mi carta"}
-              </Button>
+              </Boton>
             </>
           )}
-        </Card.Content>
-      </Card>
+        </div>
+      </Ficha>
     </div>
   );
 }

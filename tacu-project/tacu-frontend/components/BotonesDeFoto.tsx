@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@heroui/react";
 import { generarFotos, quitarFotoDePlato, subirFotoDePlato } from "@/lib/api";
 import type { Foto } from "@/lib/tipos";
 import { SubirImagen } from "@/components/SubirImagen";
+import { Boton } from "./ui/Boton";
 
 /**
  * La foto llega por prop desde el mapa de useFotos: la tarjeta lee SOLO su
@@ -49,9 +49,9 @@ export function BotonesDeFoto({
 
   if (estado === "pendiente" || estado === "generando") {
     return (
-      <Button isDisabled className="w-full" size="sm" variant="secondary">
-        {estado === "pendiente" ? "En cola..." : "Dibujando..."}
-      </Button>
+      <Boton disabled ancho tamano="sm" variante="fantasma">
+        {estado === "pendiente" ? "En cola…" : "Dibujando…"}
+      </Boton>
     );
   }
 
@@ -60,48 +60,49 @@ export function BotonesDeFoto({
       <div className="flex gap-2">
         {estado === "lista" ? (
           <>
-            <Button
+            <Boton
               className="flex-1"
-              isDisabled={ocupado}
-              size="sm"
-              variant="secondary"
-              onPress={() => quitar.mutate()}
+              disabled={ocupado}
+              tamano="sm"
+              variante="fantasma"
+              onClick={() => quitar.mutate()}
             >
               {quitar.isPending ? "Quitando..." : "Quitar"}
-            </Button>
-            <Button
+            </Boton>
+            <Boton
               className="flex-1"
-              isDisabled={ocupado}
-              size="sm"
-              variant="secondary"
-              onPress={() => generar.mutate()}
+              disabled={ocupado}
+              tamano="sm"
+              variante="fantasma"
+              onClick={() => generar.mutate()}
             >
               {generar.isPending ? "Pidiendo..." : "Regenerar"}
-            </Button>
+            </Boton>
           </>
         ) : estado === "error" ? (
-          <Button
+          <Boton
             className="flex-1"
-            isDisabled={ocupado}
-            size="sm"
-            variant="secondary"
-            onPress={() => generar.mutate()}
+            disabled={ocupado}
+            tamano="sm"
+            variante="fantasma"
+            onClick={() => generar.mutate()}
           >
             {generar.isPending ? "Reintentando..." : "Reintentar"}
-          </Button>
+          </Boton>
         ) : estado === "sin_presupuesto" ? (
           subir
         ) : (
           <>
             {subir}
-            <Button
+            <Boton
               className="flex-1"
-              isDisabled={ocupado}
-              size="sm"
-              onPress={() => generar.mutate()}
+              disabled={ocupado}
+              tamano="sm"
+              variante="amarillo"
+              onClick={() => generar.mutate()}
             >
-              {generar.isPending ? "Pidiendo..." : "Generar con IA"}
-            </Button>
+              {generar.isPending ? "Pidiendo…" : "Generar"}
+            </Boton>
           </>
         )}
       </div>

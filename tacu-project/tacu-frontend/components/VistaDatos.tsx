@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button, Description, Input, Label, TextField } from "@heroui/react";
+import { Description, Input, Label, TextField } from "@heroui/react";
 import { guardarNombre } from "@/lib/api";
 import type { Importacion } from "@/lib/tipos";
 import { SelectorDeTipos } from "./SelectorDeTipos";
+import { Boton } from "./ui/Boton";
 
 /**
  * Paso 1 · Tus datos: quien es el negocio.
@@ -42,8 +43,10 @@ export function VistaDatos({
   return (
     <div className="flex max-w-xl flex-col gap-7">
       <div>
-        <h2 className="text-xl font-semibold">Tus datos</h2>
-        <p className="text-sm text-muted">
+        <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
+          Tus datos
+        </h2>
+        <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
           Con el nombre armamos tu dirección web.
         </p>
       </div>
@@ -66,15 +69,15 @@ export function VistaDatos({
       <SelectorDeTipos idImportacion={importacion.id} />
 
       <div>
-        <Button
-          isDisabled={nombre.trim() === ""}
-          onPress={() => {
+        <Boton
+          disabled={nombre.trim() === ""}
+          onClick={() => {
             guardar();
             onSeguir();
           }}
         >
           Continuar
-        </Button>
+        </Boton>
       </div>
     </div>
   );

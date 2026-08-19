@@ -1,17 +1,19 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, ProgressBar } from "@heroui/react";
+import { Boton } from "./ui/Boton";
+import { Girador } from "./ui/Girador";
+import { Medidor } from "./ui/Medidor";
 import { Palette, Sparkles } from "lucide-react";
 import { generarFotos, obtenerEstilo } from "@/lib/api";
 import { useFotos } from "@/lib/hooks";
 
 /**
- * Lo que se puede hacer ESTANDO en las fotos, y solo ahi.
+ * La tarjeta medidor: cuantas fotos hay, cuantas faltan y el boton de generar.
  *
- * Un boton de generar mientras se revisan precios no es que estorbe: invita a
- * gastar antes de comprobar los datos, que es el orden que este flujo existe
- * para evitar.
+ * Vive DENTRO de la pantalla de fotos y solo ahi. Un boton de generar mientras
+ * se revisan precios no es que estorbe: invita a gastar antes de comprobar los
+ * datos, que es el orden que este flujo existe para evitar.
  */
 export function AccionesDeFotos({
   idImportacion,
@@ -50,51 +52,59 @@ export function AccionesDeFotos({
   const estiloPropio = !!(estilo?.base.recipiente || estilo?.base.fondo);
 
   return (
-    <div className="flex flex-col gap-2 border-t border-border pt-4">
-      <Button
-        className="relative justify-start"
-        size="sm"
-        variant="tertiary"
-        onPress={onEstilo}
-      >
-        <Palette className="size-4" />
-        Estilo de las fotos
-        {estiloPropio && (
-          <span className="absolute end-2 top-2 size-1.5 rounded-full bg-accent" />
-        )}
-      </Button>
-
-      {enCurso > 0 ? (
-        <div className="flex flex-col gap-1.5 px-2">
-          <ProgressBar
-            aria-label="Fotos generadas"
-            maxValue={lista.length}
-            value={listas}
-          />
-          <span className="text-xs tabular-nums text-muted">
-            {listas} de {lista.length} · van llegando de a pocas
-          </span>
+    <div className="mt-4 rounded-[14px] border border-border bg-surface px-4 py-3.5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3.5">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-medium leading-none">
+            <span className="font-display tabular-nums">{listas}</span> de{" "}
+            <span className="font-display tabular-nums">{lista.length}</span>{" "}
+            platos con foto
+          </p>
+          <div className="mt-2.5">
+            <Medidor de={listas} sobre={lista.length} />
+          </div>
         </div>
-      ) : (
-        caben > 0 && (
-          <Button
-            isDisabled={generarTodas.isPending}
-            size="sm"
-            onPress={() => generarTodas.mutate()}
-          >
-            <Sparkles className="size-4" />
-            {generarTodas.isPending ? "Encolando..." : "Generar las que faltan"}
-          </Button>
-        )
-      )}
+
+        {enCurso > 0 ? (
+          <span className="flex shrink-0 items-center gap-2 text-[11.5px] text-tenue">
+            <Girador tam={11} />
+            van llegando de a pocas
+          </span>
+        ) : (
+          caben > 0 && (
+            <Boton
+              ancho
+              className="shrink-0 lg:w-auto"
+              disabled={generarTodas.isPending}
+              tamano="sm"
+              variante="amarillo"
+              onClick={() => generarTodas.mutate()}
+            >
+              <Sparkles className="size-4" />
+              {generarTodas.isPending ? "Encolando…" : "Generar las que faltan"}
+            </Boton>
+          )
+        )}
+      </div>
 
       {gasto && (
-        <p className="px-2 text-xs text-muted">
+        <p className="mt-2.5 text-[11.5px] leading-[1.4] text-tenue">
           {caben === 0
             ? "Se acabaron las fotos con IA. Las tuyas no gastan nada."
             : `Te queda${caben === 1 ? "" : "n"} ~${caben} foto${caben === 1 ? "" : "s"} con IA`}
         </p>
       )}
+
+      {/* En el telefono el estilo no cabe en la cabecera: va aqui, separado. */}
+      <button
+        className="mt-3 flex w-full items-center gap-2 border-t border-separator pt-3 text-[12.5px] text-muted transition-colors hover:text-tinta lg:hidden"
+        type="button"
+        onClick={onEstilo}
+      >
+        <Palette className="size-4" />
+        Estilo de las fotos
+        {estiloPropio && <span className="size-1.5 rounded-full bg-accent" />}
+      </button>
     </div>
   );
 }

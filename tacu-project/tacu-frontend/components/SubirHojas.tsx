@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { Alert, Button, Spinner } from "@heroui/react";
 import { FileText, Plus, X } from "lucide-react";
 import { subirCarta } from "@/lib/api";
+import { Aviso } from "./ui/Aviso";
+import { Boton } from "./ui/Boton";
+import { Girador } from "./ui/Girador";
 
 const TIPOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAXIMO_HOJAS = 4;
@@ -112,7 +114,7 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
           del titulo y del boton, que son los que marcan el borde de la columna.
           El outline no ocupa sitio, asi que se pinta por fuera sin mover nada. */}
       <div
-        className={`flex flex-wrap items-start gap-4 rounded-2xl transition-all ${
+        className={`flex flex-wrap items-start gap-2.5 rounded-2xl transition-all ${
           encima
             ? "outline-2 outline-offset-8 outline-dashed outline-accent"
             : "outline-transparent"
@@ -137,7 +139,7 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
             <motion.div
               key={`${archivo.name}-${archivo.size}-${i}`}
               animate={{ opacity: 1 }}
-              className="group relative h-40 w-32 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-secondary"
+              className="group relative aspect-[3/4] w-[104px] shrink-0 overflow-hidden rounded-xl border border-[#E7E5E0] bg-surface-secondary"
               exit={{ opacity: 0 }}
               initial={{ opacity: 0 }}
             >
@@ -156,7 +158,7 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
                 </div>
               )}
 
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pt-6 pb-1.5">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 px-2 pb-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]">
                 <span className="text-xs font-medium text-white">
                   Hoja {i + 1} · {mb(archivo.size)} MB
                 </span>
@@ -164,7 +166,7 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
 
               <button
                 aria-label={`Quitar la hoja ${i + 1}`}
-                className="absolute end-1 top-1 grid size-7 place-items-center rounded-lg bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                className="absolute end-1.5 top-1.5 grid size-[23px] place-items-center rounded-full bg-tinta/70 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                 type="button"
                 onClick={() => {
                   setArchivos(archivos.filter((_, j) => j !== i));
@@ -179,7 +181,7 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
 
         {puedeAnadir && (
           <motion.label
-            className="flex h-40 w-32 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-muted transition-colors hover:border-accent hover:text-accent"
+            className="flex aspect-[3/4] w-[104px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#CFCBC2] bg-surface text-tenue transition-colors hover:border-tinta hover:bg-[#F6F4F0] hover:text-tinta"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -205,24 +207,17 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
         )}
       </div>
 
-      {aviso && (
-        <Alert role="alert" status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Description>{aviso}</Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
+      {aviso && <Aviso tono="bloquea">{aviso}</Aviso>}
 
       <div className="flex flex-col items-start gap-1.5">
-        <Button
-          isDisabled={archivos.length === 0 || enviando}
-          size="lg"
+        <Boton
+          disabled={archivos.length === 0 || enviando}
+          tamano="lg"
           type="submit"
         >
-          {enviando ? <Spinner /> : null}
+          {enviando ? <Girador /> : null}
           {enviando ? "Subiendo..." : "Leer mi carta"}
-        </Button>
+        </Boton>
         <p className="text-xs text-muted">
           {archivos.length === 0
             ? "Sube al menos una hoja."

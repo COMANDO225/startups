@@ -2,10 +2,10 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { Button } from "@heroui/react";
 import { ImageOff, Trash2, Undo2 } from "lucide-react";
 import { quitarPlato, recuperarPlato, urlMedia } from "@/lib/api";
 import type { Plato } from "@/lib/tipos";
+import { Boton } from "./ui/Boton";
 
 /**
  * Los platos que la ultima lectura ya no trajo.
@@ -40,14 +40,14 @@ export function PlatosAusentes({
   const conFoto = platos.filter((p) => p.foto?.url).length;
 
   return (
-    <section className="mb-8 flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
+    <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
       <div>
-        <h2 className="text-lg font-semibold">
+        <h2 className="font-display text-[15px] font-semibold leading-[1.25]">
           {platos.length === 1
             ? "Un plato ya no aparece en tu carta"
             : `${platos.length} platos ya no aparecen en tu carta`}
         </h2>
-        <p className="text-sm text-muted">
+        <p className="mt-1 text-[12.5px] leading-[1.45] text-tenue">
           La última lectura no los encontró. No los borramos por nuestra cuenta
           {conFoto > 0 && (
             <>
@@ -89,25 +89,25 @@ export function PlatosAusentes({
                 <p className="text-xs text-muted">{plato.desde}</p>
               </div>
 
-              <Button
-                isDisabled={recuperar.isPending}
-                size="sm"
-                variant="secondary"
-                onPress={() => recuperar.mutate(plato.id)}
+              <Boton
+                disabled={recuperar.isPending}
+                tamano="sm"
+                variante="blanco"
+                onClick={() => recuperar.mutate(plato.id)}
               >
                 <Undo2 className="size-3.5" />
                 Sigue en mi carta
-              </Button>
-              <Button
+              </Boton>
+              <Boton
                 aria-label={`Quitar ${plato.nombre}`}
-                isDisabled={quitar.isPending}
-                size="sm"
-                variant="tertiary"
-                onPress={() => quitar.mutate(plato.id)}
+                disabled={quitar.isPending}
+                tamano="sm"
+                variante="fantasma"
+                onClick={() => quitar.mutate(plato.id)}
               >
                 <Trash2 className="size-3.5" />
                 Quitar
-              </Button>
+              </Boton>
             </motion.li>
           ))}
         </AnimatePresence>

@@ -29,7 +29,7 @@ export function Panel({
     return (
       <Modal.Backdrop isOpen={abierto} onOpenChange={onAbierto}>
         <Modal.Container>
-          <Modal.Dialog className="w-full sm:max-w-lg">
+          <Modal.Dialog className="w-full sm:max-w-[420px]">
             <Modal.CloseTrigger />
             <Modal.Header>
               <Modal.Heading>{titulo}</Modal.Heading>
@@ -47,7 +47,7 @@ export function Panel({
       {/* placement bottom + Handle = arrastrar para cerrar, que es lo que hace
           que se sienta nativo en el telefono. */}
       <Drawer.Content placement="bottom">
-        <Drawer.Dialog className="max-h-[85dvh]">
+        <Drawer.Dialog className="max-h-[88dvh]">
           <Drawer.Handle />
           <Drawer.CloseTrigger />
           <Drawer.Header>

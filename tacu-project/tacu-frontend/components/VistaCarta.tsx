@@ -8,7 +8,6 @@ import {
   motion,
   useDragControls,
 } from "motion/react";
-import { Alert, Button, Spinner } from "@heroui/react";
 import {
   AlertTriangle,
   FileText,
@@ -28,8 +27,11 @@ import {
   urlMedia,
 } from "@/lib/api";
 import type { Importacion, Pagina, Plato } from "@/lib/tipos";
-import { EscanerDeCarta } from "./EscanerDeCarta";
+import { PanelDeLectura } from "./PanelDeLectura";
 import { SubirHojas } from "./SubirHojas";
+import { Aviso } from "./ui/Aviso";
+import { Boton } from "./ui/Boton";
+import { Girador } from "./ui/Girador";
 
 const MAX_PAGINAS = 4;
 const TIPOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
@@ -64,8 +66,10 @@ export function VistaCarta({
     return (
       <div className="flex max-w-3xl flex-col gap-7">
         <div>
-          <h2 className="text-xl font-semibold">Tu carta</h2>
-          <p className="text-sm text-muted">
+          <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
+            Tu carta
+          </h2>
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
             Vuelve a subirla. Tu restaurante y tus datos siguen guardados.
           </p>
         </div>
@@ -91,15 +95,9 @@ export function VistaCarta({
           ))}
         </div>
 
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>No pudimos leer tu carta</Alert.Title>
-            <Alert.Description>
-              {importacion.error ?? "La IA no sacó nada en limpio."}
-            </Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <Aviso tono="bloquea" titulo={<>No pudimos leer tu carta</>}>
+          {importacion.error ?? "La IA no sacó nada en limpio."}
+        </Aviso>
 
         <div className="flex flex-col gap-2">
           <h3 className="font-medium">Para que salga a la primera</h3>
@@ -142,8 +140,10 @@ export function VistaCarta({
     return (
       <div className="flex max-w-3xl flex-col gap-7">
         <div>
-          <h2 className="text-xl font-semibold">Tu carta</h2>
-          <p className="text-sm text-muted">
+          <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
+            Tu carta
+          </h2>
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
             Hasta {MAX_PAGINAS} fotos o un PDF. Derechas y con luz: tienen que
             leerse los precios.
           </p>
@@ -157,8 +157,10 @@ export function VistaCarta({
     <div className="flex max-w-3xl flex-col gap-7">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Tu carta</h2>
-          <p className="text-sm text-muted">
+          <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
+            Tu carta
+          </h2>
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
             {editando
               ? `Añade, quita o reordena tus hojas. Hasta ${MAX_PAGINAS}.`
               : "Las hojas que leímos para armar tu catálogo."}
@@ -170,14 +172,14 @@ export function VistaCarta({
             aqui a mirar es un clic de distancia de quitar una hoja que ya
             costo una lectura. */}
         {!leyendo && !editando && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onPress={() => setEditando(true)}
+          <Boton
+            tamano="sm"
+            variante="blanco"
+            onClick={() => setEditando(true)}
           >
             <Pencil className="size-3.5" />
             Editar
-          </Button>
+          </Boton>
         )}
       </div>
 
@@ -193,10 +195,7 @@ export function VistaCarta({
       )}
 
       {leyendo ? (
-        <EscanerDeCarta
-          etapa={importacion.etapa}
-          paginas={importacion.paginas}
-        />
+        <PanelDeLectura etapa={importacion.etapa} />
       ) : editando ? (
         <div className="flex flex-col items-start gap-2">
           <LeerMiCarta
@@ -205,13 +204,13 @@ export function VistaCarta({
             platos={platos}
             onListo={() => setEditando(false)}
           />
-          <Button
-            size="sm"
-            variant="tertiary"
-            onPress={() => setEditando(false)}
+          <Boton
+            tamano="sm"
+            variante="fantasma"
+            onClick={() => setEditando(false)}
           >
             Dejarlo como está
-          </Button>
+          </Boton>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -230,7 +229,7 @@ function Resumen({
   categorias: number;
 }) {
   return (
-    <div className="flex flex-wrap gap-6 rounded-xl border border-border bg-surface px-5 py-4">
+    <div className="flex flex-wrap gap-7 rounded-[14px] border border-border bg-surface px-4 py-3.5">
       <Dato n={platos} que={platos === 1 ? "plato" : "platos"} />
       <Dato
         n={categorias}
@@ -243,8 +242,10 @@ function Resumen({
 function Dato({ n, que }: { n: number; que: string }) {
   return (
     <div>
-      <p className="text-2xl font-semibold tabular-nums">{n}</p>
-      <p className="text-xs text-muted">{que}</p>
+      <p className="font-display text-2xl font-semibold tabular-nums leading-none">
+        {n}
+      </p>
+      <p className="mt-1 text-[11.5px] text-tenue">{que}</p>
     </div>
   );
 }
@@ -333,11 +334,11 @@ function Paginas({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-start gap-4">
+      <div className="flex flex-wrap items-start gap-2.5">
         <Reorder.Group
           axis="x"
           as="ul"
-          className="flex flex-wrap gap-4"
+          className="flex flex-wrap gap-2.5"
           values={orden}
           onReorder={setOrden}
         >
@@ -363,7 +364,7 @@ function Paginas({
 
         {puedeAnadir && (
           <motion.label
-            className="flex h-40 w-32 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-muted transition-colors hover:border-accent hover:text-accent"
+            className="flex aspect-[3/4] w-[104px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#CFCBC2] bg-surface text-tenue transition-colors hover:border-tinta hover:bg-[#F6F4F0] hover:text-tinta"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -379,7 +380,7 @@ function Paginas({
               }}
             />
             {anadir.isPending ? (
-              <Spinner />
+              <Girador />
             ) : (
               <>
                 <Plus className="size-6" />
@@ -396,14 +397,7 @@ function Paginas({
         </p>
       )}
 
-      {aviso && (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Description>{aviso}</Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
+      {aviso && <Aviso tono="bloquea">{aviso}</Aviso>}
 
       {quitando && (
         <AvisoDeQuitarHoja
@@ -459,18 +453,18 @@ function AvisoDeQuitarHoja({
       abierto
       descripcion={
         sinOrigen ? (
-          <p className="text-sm text-muted">
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
             Esta carta se leyó antes de que guardáramos de qué hoja sale cada
             plato, así que no podemos decirte cuáles salieron de ésta. Se va
             solo la imagen.
           </p>
         ) : platos.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
             Ningún plato de tu catálogo salió de esta hoja, así que solo se va
             la imagen.
           </p>
         ) : (
-          <p className="text-sm text-muted">
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
             De esta hoja salieron <strong>{platos.length} productos</strong>
             {conFoto > 0 && <>, {conFoto} con foto ya generada</>}.
           </p>
@@ -489,26 +483,26 @@ function AvisoDeQuitarHoja({
 
         {platos.length > 0 && (
           <div className="flex flex-col gap-3">
-            <Button
-              isDisabled={ocupado}
-              size="lg"
-              variant="secondary"
-              onPress={() => onQuitar(false)}
+            <Boton
+              disabled={ocupado}
+              tamano="lg"
+              variante="blanco"
+              onClick={() => onQuitar(false)}
             >
               Quitar solo la imagen
-            </Button>
+            </Boton>
             <p className="-mt-2 text-xs text-muted">
               Los {platos.length} productos se quedan en tu catálogo tal como
               están.
             </p>
 
-            <Button
-              isDisabled={ocupado}
-              size="lg"
-              onPress={() => onQuitar(true)}
+            <Boton
+              disabled={ocupado}
+              tamano="lg"
+              onClick={() => onQuitar(true)}
             >
               Quitar la imagen y sus {platos.length} productos
-            </Button>
+            </Boton>
             <p className="-mt-2 text-xs text-bloquea">
               Esto no se puede deshacer
               {conFoto > 0 && (
@@ -523,13 +517,9 @@ function AvisoDeQuitarHoja({
         )}
 
         {platos.length === 0 && (
-          <Button
-            isDisabled={ocupado}
-            size="lg"
-            onPress={() => onQuitar(false)}
-          >
+          <Boton disabled={ocupado} tamano="lg" onClick={() => onQuitar(false)}>
             Quitar la hoja
-          </Button>
+          </Boton>
         )}
       </div>
     </Panel>
@@ -559,7 +549,7 @@ function Hoja({
   return (
     <Reorder.Item
       as="li"
-      className="group relative h-40 w-32 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-secondary"
+      className="group relative aspect-[3/4] w-[104px] shrink-0 overflow-hidden rounded-xl border border-[#E7E5E0] bg-surface-secondary"
       dragControls={controles}
       dragListener={false}
       exit={{ opacity: 0, scale: 0.9 }}
@@ -589,7 +579,7 @@ function Hoja({
         />
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pt-6 pb-1.5">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 px-2 pb-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]">
         <span className="text-xs font-medium text-white">Página {numero}</span>
       </div>
 
@@ -597,7 +587,7 @@ function Hoja({
         <>
           <button
             aria-label={`Mover la página ${numero}`}
-            className="absolute start-1 top-1 grid size-7 cursor-grab place-items-center rounded-lg bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
+            className="absolute start-1.5 top-1.5 grid size-[23px] cursor-grab place-items-center rounded-full bg-tinta/70 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
             type="button"
             onPointerDown={(e) => controles.start(e)}
           >
@@ -606,7 +596,7 @@ function Hoja({
 
           <button
             aria-label={`Quitar la página ${numero}`}
-            className="absolute end-1 top-1 grid size-7 place-items-center rounded-lg bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100"
+            className="absolute end-1.5 top-1.5 grid size-[23px] place-items-center rounded-full bg-tinta/70 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100"
             disabled={quitando}
             type="button"
             onClick={onQuitar}
@@ -656,16 +646,22 @@ function LeerMiCarta({
 
   if (!confirmando) {
     return (
-      <Button size="lg" onPress={() => setConfirmando(true)}>
+      <Boton
+        tamano="lg"
+        variante="amarillo"
+        onClick={() => setConfirmando(true)}
+      >
         Leer mi carta
-      </Button>
+      </Boton>
     );
   }
 
   return (
     <div className="flex max-w-lg flex-col gap-3 rounded-xl border border-border bg-surface p-4">
       <div>
-        <h4 className="font-medium">Leer tus hojas otra vez</h4>
+        <h4 className="font-display text-[14.5px] font-semibold leading-[1.25]">
+          Leer tus hojas otra vez
+        </h4>
         <p className="mt-1 text-sm text-muted">
           Las leemos otra vez y actualizamos los {platos} platos con lo que diga
           tu papel: nombres, precios y secciones.
@@ -685,20 +681,20 @@ function LeerMiCarta({
       )}
 
       <div className="flex gap-2">
-        <Button
-          isDisabled={releer.isPending}
-          size="sm"
-          onPress={() => releer.mutate()}
+        <Boton
+          disabled={releer.isPending}
+          tamano="sm"
+          onClick={() => releer.mutate()}
         >
           {releer.isPending ? "Empezando..." : "Leerla"}
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onPress={() => setConfirmando(false)}
+        </Boton>
+        <Boton
+          tamano="sm"
+          variante="blanco"
+          onClick={() => setConfirmando(false)}
         >
           Mejor no
-        </Button>
+        </Boton>
       </div>
     </div>
   );

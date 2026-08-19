@@ -2,14 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Key } from "@heroui/react";
-import {
-  Alert,
-  Button,
-  Description,
-  Label,
-  ListBox,
-  Select,
-} from "@heroui/react";
+import { Description, Label, ListBox, Select } from "@heroui/react";
 import {
   Drumstick,
   Fish,
@@ -23,6 +16,8 @@ import {
 } from "lucide-react";
 import { catalogoDeTipos, guardarTipos, obtenerTipos } from "@/lib/api";
 import type { ConteoDeTipo, Reparto } from "@/lib/tipos";
+import { Boton } from "./ui/Boton";
+import { Aviso } from "./ui/Aviso";
 
 /** El icono es presentacion y vive aqui, no en el dominio. */
 const iconos: Record<string, typeof Fish> = {
@@ -125,7 +120,7 @@ export function SelectorDeTipos({
         {/* h-auto: el disparador crece con los chips en vez de recortarlos.
           items-center y no items-start: con items-start el chevron se sube al
           borde de arriba y deja de estar a la altura de los chips. */}
-        <Select.Trigger className="h-auto min-h-11 items-center py-1.5">
+        <Select.Trigger className="h-auto min-h-[46px] items-center rounded-xl border border-borde-campo bg-surface py-1.5">
           <Select.Value>
             {({ defaultChildren, isPlaceholder }) => {
               if (isPlaceholder || elegidos.length === 0)
@@ -139,7 +134,7 @@ export function SelectorDeTipos({
                     return (
                       <span
                         key={clave}
-                        className="group/chip flex items-center gap-1.5 rounded-full bg-default py-1 ps-2 pe-1 text-sm transition-colors hover:bg-accent-soft hover:text-accent-soft-foreground"
+                        className="group/chip flex items-center gap-1.5 rounded-full border border-borde-suave bg-surface py-1 ps-2.5 pe-1 text-[12px] font-medium text-muted transition-colors hover:border-tinta hover:text-tinta"
                       >
                         <Icono className="size-3.5 shrink-0" />
                         {tipo?.nombre ?? clave}
@@ -273,26 +268,28 @@ function RepartoDeLaCarta({
       </ul>
 
       {reparto.faltan.map((f) => (
-        <Alert key={f.clave} status="warning">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Description>
-              {f.platos} {f.platos === 1 ? "plato parece" : "platos parecen"} de{" "}
-              {f.nombre} y{f.platos === 1 ? " sale" : " salen"}{" "}
-              {principal
-                ? `con la guarnición de ${principal.nombre}`
-                : "sin guarnición de la casa"}
-              .
-            </Alert.Description>
-          </Alert.Content>
-          <Button
-            size="sm"
-            variant="tertiary"
-            onPress={() => onAnadir(f.clave)}
+        <Aviso
+          key={f.clave}
+          className="flex items-center gap-3"
+          tono="confirmar"
+        >
+          <span className="flex-1">
+            {f.platos} {f.platos === 1 ? "plato parece" : "platos parecen"} de{" "}
+            {f.nombre} y{f.platos === 1 ? " sale" : " salen"}{" "}
+            {principal
+              ? `con la guarnición de ${principal.nombre}`
+              : "sin guarnición de la casa"}
+            .
+          </span>
+          <Boton
+            className="shrink-0"
+            tamano="sm"
+            variante="blanco"
+            onClick={() => onAnadir(f.clave)}
           >
             Añadir {f.nombre}
-          </Button>
-        </Alert>
+          </Boton>
+        </Aviso>
       ))}
     </div>
   );

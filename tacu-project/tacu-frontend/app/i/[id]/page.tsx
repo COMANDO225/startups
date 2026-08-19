@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Card } from "@heroui/react";
+import { Boton } from "@/components/ui/Boton";
+import { Ficha } from "@/components/ui/Ficha";
+import { AccionesDeFotos } from "@/components/AccionesDeFotos";
 import { CatalogoEsqueleto } from "@/components/CatalogoEsqueleto";
 import { PlatosAusentes } from "@/components/PlatosAusentes";
 import { Lateral } from "@/components/Lateral";
@@ -89,18 +91,28 @@ export default function Trabajo() {
   const marcados = platos.filter((p) => p.revisar);
 
   return (
-    <div className="flex min-h-svh flex-col md:flex-row">
+    <div className="flex min-h-svh flex-col lg:flex-row">
       <Lateral
-        idImportacion={importacion.id}
+        estado={importacion.estado}
+        // Lo que va a la derecha del titulo en el telefono: el dato de la
+        // seccion en la que estas, no un recuento global.
+        meta={
+          secActiva === "restaurante"
+            ? `${importacion.paginas.length} ${importacion.paginas.length === 1 ? "hoja" : "hojas"}`
+            : secActiva === "carta"
+              ? `${platos.length} platos`
+              : importacion.estado === "publicada"
+                ? "en línea"
+                : undefined
+        }
         nombre={importacion.restaurante.nombre || "Tu restaurante"}
-        onEstilo={() => setEstilando("")}
-        onIr={ir}
         seccion={secActiva}
         secciones={secs}
         sub={subActivo}
+        onIr={ir}
       />
 
-      <main className="min-w-0 flex-1 px-4 py-6 md:px-10 md:py-10">
+      <main className="anima-panel min-w-0 flex-1 px-[14px] pt-4 pb-24 lg:max-w-[1080px] lg:px-8 lg:pt-[26px] lg:pb-10">
         {secActiva === "restaurante" && subActivo === "datos" && (
           <VistaDatos
             importacion={importacion}
@@ -166,12 +178,14 @@ function Revisar({
 }) {
   if (marcados.length === 0) {
     return (
-      <div className="mx-auto max-w-lg py-10 text-center">
-        <h2 className="text-lg font-semibold">Todo cuadra</h2>
-        <p className="mt-1 mb-5 text-sm text-muted">
+      <div className="mx-auto max-w-lg py-14 text-center">
+        <h2 className="font-display text-lg font-semibold">Todo cuadra</h2>
+        <p className="mt-1 mb-5 text-[13.5px] text-tenue">
           Cada precio coincide con lo que dice tu carta.
         </p>
-        <Button onPress={onSeguir}>Seguir a las fotos</Button>
+        <Boton variante="tinta" onClick={onSeguir}>
+          Seguir a las fotos →
+        </Boton>
       </div>
     );
   }
@@ -181,15 +195,17 @@ function Revisar({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold">Revisa contra tu papel</h2>
-        <p className="text-sm text-muted">
+        <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
+          Revisa contra tu papel
+        </h2>
+        <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
           {bloquean > 0
             ? `${bloquean} ${bloquean === 1 ? "plato no cuadra" : "platos no cuadran"} y no se publican así. El resto solo hay que mirarlo.`
             : "Nada está roto. Solo confirma que estos están bien."}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(214px,1fr))] lg:gap-3">
         {marcados.map((plato) => (
           <TarjetaPlato
             key={plato.id}
@@ -221,21 +237,52 @@ function Catalogo({
 
   return (
     <div>
-      <PlatosAusentes idImportacion={idImportacion} platos={ausentes} />
+      <div className="flex items-end justify-between gap-3.5">
+        <div>
+          <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
+            Tus platos
+          </h2>
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+            Genera la que falte, sube la tuya o corrige la que hay.
+          </p>
+        </div>
+        <button
+          className="hidden shrink-0 items-center gap-2 rounded-full border border-borde-suave bg-surface px-[13px] py-[9px] text-[12.5px] font-medium text-tinta transition-colors hover:border-tinta lg:flex"
+          type="button"
+          onClick={() => onEstiloDe("")}
+        >
+          <span className="size-3 rounded-full border-[1.5px] border-tinta" />
+          Estilo
+        </button>
+      </div>
+
+      <AccionesDeFotos
+        idImportacion={idImportacion}
+        onEstilo={() => onEstiloDe("")}
+      />
+
+      <div className="mt-6">
+        <PlatosAusentes idImportacion={idImportacion} platos={ausentes} />
+      </div>
 
       {importacion.categorias.map((categoria) => (
         <section key={categoria.nombre} className="mb-8">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">{categoria.nombre}</h2>
-            <Button
-              size="sm"
-              variant="tertiary"
-              onPress={() => onEstiloDe(categoria.nombre)}
+          <div className="sticky top-0 z-2 -mt-2 mb-2.5 flex items-center justify-between gap-2.5 bg-crema py-2 lg:static lg:mt-0 lg:mb-3 lg:py-0">
+            <h2 className="font-display text-sm font-semibold leading-[1.2] tracking-[-0.01em]">
+              {categoria.nombre}
+            </h2>
+            <span className="flex-1 text-[11.5px] text-tenue">
+              {categoria.platos.filter((p) => !p.ausente).length}
+            </span>
+            <button
+              className="shrink-0 rounded-full border border-borde-suave bg-surface px-[11px] py-[7px] text-[11.5px] text-muted transition-colors hover:border-tinta hover:text-tinta"
+              type="button"
+              onClick={() => onEstiloDe(categoria.nombre)}
             >
-              Estilo de esta sección
-            </Button>
+              Estilo
+            </button>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(214px,1fr))] lg:gap-3">
             {categoria.platos
               .filter((plato) => !plato.ausente)
               .map((plato) => (
@@ -261,16 +308,16 @@ function Suelto({ children }: { children: React.ReactNode }) {
 
 function Aviso({ titulo, detalle }: { titulo: string; detalle: string }) {
   return (
-    <Card variant="secondary">
-      <Card.Header>
-        <Card.Title>{titulo}</Card.Title>
-        <Card.Description>{detalle}</Card.Description>
-      </Card.Header>
-      <Card.Footer>
+    <Ficha className="p-5">
+      <h2 className="font-display text-lg font-semibold">{titulo}</h2>
+      <p className="mt-1.5 mb-5 text-[13.5px] leading-[1.5] text-tenue">
+        {detalle}
+      </p>
+      <div>
         <Link href="/">
-          <Button>Volver a intentar</Button>
+          <Boton variante="tinta">Volver a intentar</Boton>
         </Link>
-      </Card.Footer>
-    </Card>
+      </div>
+    </Ficha>
   );
 }

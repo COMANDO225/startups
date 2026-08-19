@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Input, Label, TextField } from "@heroui/react";
+import { Input, Label, TextField } from "@heroui/react";
 import { Lateral } from "@/components/Lateral";
 import { SelectorDeTipos } from "@/components/SelectorDeTipos";
 import { crearRestaurante } from "@/lib/api";
 import { secciones as armarSecciones } from "@/lib/flujo";
+import { Aviso } from "@/components/ui/Aviso";
+import { Boton } from "@/components/ui/Boton";
 
 /**
  * Paso 1 · Tus datos, y el principio de todo.
@@ -51,23 +53,25 @@ export default function Inicio() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col md:flex-row">
+    <div className="flex min-h-svh flex-col lg:flex-row">
       <Lateral
+        estado="nueva"
         nombre={nombre.trim() || "Tu restaurante"}
         seccion="restaurante"
         secciones={secs}
         sub="datos"
         // Nada donde ir: los otros dos pasos estan bloqueados y este es el que
-        // se esta haciendo. El estilo se configura cuando ya hay platos.
-        onEstilo={() => {}}
+        // se esta haciendo.
         onIr={() => {}}
       />
 
-      <main className="min-w-0 flex-1 px-4 py-6 md:px-10 md:py-10">
+      <main className="anima-panel min-w-0 flex-1 px-[14px] pt-4 pb-24 lg:max-w-[1080px] lg:px-8 lg:pt-[26px] lg:pb-10">
         <form className="flex max-w-xl flex-col gap-7" onSubmit={crear}>
           <div>
-            <h1 className="text-2xl font-semibold">Tus datos</h1>
-            <p className="mt-1 text-muted">
+            <h1 className="font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em]">
+              Tus datos
+            </h1>
+            <p className="mt-1.5 max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
               Con el nombre armamos tu dirección web. El tipo de negocio decide
               cómo se emplatan tus fotos.
             </p>
@@ -85,23 +89,16 @@ export default function Inicio() {
               eleccion se guarda aqui y viaja con la creacion. */}
           <SelectorDeTipos valor={tipos} onCambio={setTipos} />
 
-          {aviso && (
-            <Alert role="alert" status="danger">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Description>{aviso}</Alert.Description>
-              </Alert.Content>
-            </Alert>
-          )}
+          {aviso && <Aviso tono="bloquea">{aviso}</Aviso>}
 
           <div>
-            <Button
-              isDisabled={nombre.trim().length === 0 || creando}
-              size="lg"
+            <Boton
+              disabled={nombre.trim().length === 0 || creando}
+              tamano="lg"
               type="submit"
             >
               {creando ? "Creando..." : "Continuar"}
-            </Button>
+            </Boton>
             <p className="mt-2 text-xs text-muted">
               Sin registro ni contraseña. Tu carta queda guardada en este
               navegador.

@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Alert,
-  Button,
   Description,
   Input,
   Label,
@@ -25,6 +23,8 @@ import {
 } from "@/lib/api";
 import type { Plato } from "@/lib/tipos";
 import { SubirImagen } from "@/components/SubirImagen";
+import { Boton } from "./ui/Boton";
+import { Aviso } from "./ui/Aviso";
 
 const MAX_AJUSTE = 500;
 
@@ -112,14 +112,9 @@ export function SheetPlato({
 
         <Tabs.Panel className="flex flex-col gap-4 pt-4" id="datos">
           {plato.revisar && (
-            <Alert status={plato.revisar.bloquea ? "danger" : "warning"}>
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Description>
-                  {plato.revisar.explicacion}
-                </Alert.Description>
-              </Alert.Content>
-            </Alert>
+            <Aviso tono={plato.revisar.bloquea ? "bloquea" : "confirmar"}>
+              {plato.revisar.explicacion}
+            </Aviso>
           )}
 
           {plato.precios.map((precio, i) => (
@@ -152,12 +147,12 @@ export function SheetPlato({
             <p className="text-sm text-bloquea">{guardarDatos.error.message}</p>
           )}
 
-          <Button
-            isDisabled={guardarDatos.isPending || !variasOpciones}
-            onPress={() => guardarDatos.mutate()}
+          <Boton
+            disabled={guardarDatos.isPending || !variasOpciones}
+            onClick={() => guardarDatos.mutate()}
           >
             {guardarDatos.isPending ? "Guardando..." : "Guardar"}
-          </Button>
+          </Boton>
         </Tabs.Panel>
 
         <Tabs.Panel className="flex flex-col gap-4 pt-4" id="foto">
@@ -226,25 +221,25 @@ export function SheetPlato({
           )}
 
           <div className="flex gap-2">
-            <Button
+            <Boton
               className="flex-1"
-              isDisabled={guardarFoto.isPending}
-              variant="secondary"
-              onPress={() => guardarFoto.mutate(false)}
+              disabled={guardarFoto.isPending}
+              variante="blanco"
+              onClick={() => guardarFoto.mutate(false)}
             >
               Guardar
-            </Button>
-            <Button
+            </Boton>
+            <Boton
               className="flex-1"
-              isDisabled={guardarFoto.isPending}
-              onPress={() => guardarFoto.mutate(true)}
+              disabled={guardarFoto.isPending}
+              onClick={() => guardarFoto.mutate(true)}
             >
               {guardarFoto.isPending
                 ? "Pidiendo..."
                 : hayFoto
                   ? "Guardar y corregir"
                   : "Guardar y generar"}
-            </Button>
+            </Boton>
           </div>
         </Tabs.Panel>
       </Tabs>
@@ -266,14 +261,14 @@ function Miniatura({ url, onQuitar }: { url: string; onQuitar: () => void }) {
         className="size-20 rounded-lg border border-default object-cover"
         src={urlMedia(url)}
       />
-      <Button
+      <Boton
         aria-label="Quitar esta foto de ejemplo"
         className="absolute -end-1.5 -top-1.5 size-6 min-w-0 rounded-full p-0"
-        size="sm"
-        onPress={onQuitar}
+        tamano="sm"
+        onClick={onQuitar}
       >
         <Trash2 className="size-3" />
-      </Button>
+      </Boton>
     </div>
   );
 }

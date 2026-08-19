@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Description,
-  Input,
-  Label,
-  Separator,
-  Spinner,
-  TextField,
-} from "@heroui/react";
+import { Description, Input, Label, Separator, TextField } from "@heroui/react";
 import { Panel } from "@/components/Panel";
 import { Trash2 } from "lucide-react";
 import {
@@ -22,6 +14,8 @@ import {
   urlMedia,
 } from "@/lib/api";
 import { SubirImagen } from "@/components/SubirImagen";
+import { Boton } from "./ui/Boton";
+import { Girador } from "./ui/Girador";
 
 /**
  * El estilo tiene DOS ambitos: la base general del restaurante y la de una
@@ -81,7 +75,7 @@ export function SheetEstilo({
           onGuardado={() => onAbierto(false)}
         />
       ) : (
-        <Spinner />
+        <Girador />
       )}
     </Panel>
   );
@@ -174,14 +168,14 @@ function Formulario({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            isDisabled={dibujar.isPending}
-            size="sm"
-            variant="secondary"
-            onPress={() => dibujar.mutate()}
+          <Boton
+            disabled={dibujar.isPending}
+            tamano="sm"
+            variante="blanco"
+            onClick={() => dibujar.mutate()}
           >
             {dibujar.isPending ? "Dibujando..." : "Dibujar mi vajilla"}
-          </Button>
+          </Boton>
           <span className="text-xs text-muted">
             Gasta una foto de tu carta.
           </span>
@@ -232,11 +226,11 @@ function Formulario({
                 className="size-20 rounded-lg border border-default object-cover"
                 src={urlMedia(url)}
               />
-              <Button
+              <Boton
                 aria-label="Quitar esta foto de ejemplo"
                 className="absolute -end-1.5 -top-1.5 size-6 min-w-0 rounded-full p-0"
-                size="sm"
-                onPress={async () => {
+                tamano="sm"
+                onClick={async () => {
                   await quitarReferenciaDeBase(
                     idImportacion,
                     categoria,
@@ -246,7 +240,7 @@ function Formulario({
                 }}
               >
                 <Trash2 className="size-3" />
-              </Button>
+              </Boton>
             </div>
           ))}
           {referencias.length < 2 && (
@@ -265,9 +259,9 @@ function Formulario({
       )}
 
       <div className="flex flex-col gap-1.5">
-        <Button isDisabled={guardar.isPending} onPress={() => guardar.mutate()}>
+        <Boton disabled={guardar.isPending} onClick={() => guardar.mutate()}>
           {guardar.isPending ? "Guardando..." : "Guardar estilo"}
-        </Button>
+        </Boton>
         <p className="text-xs text-muted">
           Las fotos que ya generaste no cambian. Esto se aplica a las
           siguientes, y a las que regeneres.

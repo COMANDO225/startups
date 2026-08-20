@@ -1,6 +1,7 @@
 "use client";
 
 import { Drawer, Modal } from "@heroui/react";
+import { ChevronLeft } from "lucide-react";
 import { useEsEscritorio } from "@/lib/pantalla";
 
 /**
@@ -16,6 +17,7 @@ export function Panel({
   titulo,
   descripcion,
   pie,
+  atras,
   children,
 }: {
   abierto: boolean;
@@ -30,9 +32,27 @@ export function Panel({
    * dice siempre como se sale de el, que es lo que se espera de un modal.
    */
   pie?: React.ReactNode;
+  /** Con atras, el titulo lleva flecha y el panel es un segundo nivel. */
+  atras?: () => void;
   children: React.ReactNode;
 }) {
   const escritorio = useEsEscritorio();
+
+  const encabezado = (
+    <div className="flex items-center gap-1.5">
+      {atras && (
+        <button
+          aria-label="Volver"
+          className="-ms-1.5 grid size-7 shrink-0 place-items-center rounded-full text-tinta transition-colors hover:bg-hueso"
+          type="button"
+          onClick={atras}
+        >
+          <ChevronLeft className="size-[18px]" />
+        </button>
+      )}
+      <span className="min-w-0 truncate">{titulo}</span>
+    </div>
+  );
 
   if (escritorio) {
     return (
@@ -41,7 +61,7 @@ export function Panel({
           <Modal.Dialog className="w-full sm:max-w-[420px]">
             <Modal.CloseTrigger />
             <Modal.Header>
-              <Modal.Heading>{titulo}</Modal.Heading>
+              <Modal.Heading>{encabezado}</Modal.Heading>
               {descripcion}
             </Modal.Header>
             <Modal.Body>{children}</Modal.Body>
@@ -65,7 +85,7 @@ export function Panel({
           <Drawer.Handle />
           <Drawer.CloseTrigger />
           <Drawer.Header>
-            <Drawer.Heading>{titulo}</Drawer.Heading>
+            <Drawer.Heading>{encabezado}</Drawer.Heading>
             {descripcion}
           </Drawer.Header>
           <Drawer.Body>{children}</Drawer.Body>

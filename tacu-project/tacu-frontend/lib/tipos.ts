@@ -64,17 +64,32 @@ export type TipoRestaurante = {
   descripcion: string;
 };
 
+/**
+ * Una de las dos cosas que el dueno decide de sus fotos.
+ *
+ * `imagen` viene ya resuelta del backend —su foto si la hay, si no el dibujo—
+ * porque la precedencia es una regla del dominio: repetirla aqui seria tener dos
+ * versiones de ella esperando a divergir. Vacia = la de por defecto, que viaja
+ * con esta app y no cuesta nada.
+ */
+export type Ranura = {
+  texto: string;
+  imagen: string;
+  /** La imagen es una foto suya, no un dibujo. */
+  propia: boolean;
+  /** Toco algo aqui, asi que hay a donde volver. */
+  tocada: boolean;
+};
+
 /** El estilo de un ambito: la base general o la de una categoria. */
 export type Estilo = {
   categoria: string;
-  base: {
-    recipiente: string;
-    fondo: string;
-    referencias: string[];
-    /** Foto del recipiente vacio. Vacia = nunca se genero y se usa la de por defecto. */
-    vista: string;
-  };
+  vajilla: Ranura;
+  fondo: Ranura;
 };
+
+/** Las dos ranuras, y no hay mas. */
+export type CualRanura = "vajilla" | "fondo";
 
 export type ConteoDeTipo = {
   clave: string;

@@ -1,27 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Description, Input, Label, Separator, TextField } from "@heroui/react";
+import { Description, Input, Label, TextField } from "@heroui/react";
+import { Camera } from "lucide-react";
 import { Panel } from "@/components/Panel";
-import { Trash2 } from "lucide-react";
 import {
-  generarVistaDeEstilo,
+  dibujarRanura,
   guardarEstilo,
   obtenerEstilo,
-  quitarReferenciaDeBase,
-  subirReferenciaDeBase,
+  subirFotoDeRanura,
   urlMedia,
+  vaciarRanura,
 } from "@/lib/api";
-import { SubirImagen } from "@/components/SubirImagen";
+import type { CualRanura, Estilo, Ranura } from "@/lib/tipos";
 import { Boton } from "./ui/Boton";
 import { Girador } from "./ui/Girador";
 
-/**
- * El estilo tiene DOS ambitos: la base general del restaurante y la de una
- * categoria. La categoria hereda campo por campo lo que no redefine, por eso los
- * campos vacios muestran de placeholder lo heredado.
- */
+const TIPOS = ["image/jpeg", "image/png", "image/webp"];
+const MAX_BYTES = 10 * 1024 * 1024;
+
+const RANURAS = {
+  vajilla: {
+    titulo: "Tu vajilla",
+    ejemplo: "Ej: plato de barro, bandeja de madera, bol hondo negro.",
+    siempre: "Plato redondo blanco",
+    subir: "Subir una foto de tu plato",
+  },
+  fondo: {
+    titulo: "Tu fondo",
+    ejemplo: "Ej: mesa de madera, mantel de colores, en la playa.",
+    siempre: "Blanco de catálogo",
+    subir: "Subir una foto de tu mesa",
+  },
+} as const;
+
 export function SheetEstilo({
   idImportacion,
   categoria,
@@ -35,238 +48,264 @@ export function SheetEstilo({
   onAbierto: (v: boolean) => void;
 }) {
   const cliente = useQueryClient();
+  const [cual, setCual] = useState<CualRanura | null>(null);
+  const [texto, setTexto] = useState("");
+  const [aviso, setAviso] = useState<string | null>(null);
+  const entrada = useRef<HTMLInputElement>(null);
 
+  const clave = ["estilo", idImportacion, categoria];
   const { data: estilo } = useQuery({
-    queryKey: ["estilo", idImportacion, categoria],
+    queryKey: clave,
     queryFn: () => obtenerEstilo(idImportacion, categoria),
     enabled: abierto,
   });
 
-  // La general se pide cuando hay categoria, para mostrar de placeholder lo que
-  // se hereda en vez de un campo vacio sin explicacion.
-  const { data: general } = useQuery({
-    queryKey: ["estilo", idImportacion, ""],
-    queryFn: () => obtenerEstilo(idImportacion, ""),
-    enabled: abierto && categoria !== "",
+  const adoptar = (nuevo: Estilo) => {
+    cliente.setQueryData(clave, nuevo);
+    if (cual) setTexto(nuevo[cual].texto);
+  };
+
+  const textos = (nuevo: string) => ({
+    vajilla: cual === "vajilla" ? nuevo : (estilo?.vajilla.texto ?? ""),
+    fondo: cual === "fondo" ? nuevo : (estilo?.fondo.texto ?? ""),
   });
 
-  const [recipiente, setRecipiente] = useState("");
-  const [fondo, setFondo] = useState("");
-
-  // Los campos se siembran DURANTE el render, no en un efecto: en un efecto
-  // habria un render con el formulario vacio antes de tener los valores.
-  //
-  // La semilla es el ambito, y solo cuenta cuando ya llego: al cambiar de
-  // categoria la query se vacia, se ensena el girador, y cuando responde se
-  // adopta lo suyo. Un refetch del MISMO ambito —el que dispara guardar o
-  // dibujar— no vuelve a sembrar, o le borraria al dueno lo que esta
-  // escribiendo.
-  const semilla = estilo ? `${idImportacion}:${categoria}` : "";
-  const [sembrado, setSembrado] = useState("");
-  if (estilo && semilla !== sembrado) {
-    setSembrado(semilla);
-    setRecipiente(estilo.base.recipiente);
-    setFondo(estilo.base.fondo);
-  }
-
-  const refrescar = () =>
-    cliente.invalidateQueries({ queryKey: ["estilo", idImportacion] });
-
-  const guardar = useMutation({
-    mutationFn: () =>
-      guardarEstilo(idImportacion, categoria, { recipiente, fondo }),
-    onSuccess: async () => {
-      await refrescar();
-      onAbierto(false);
-    },
+  const subir = useMutation({
+    mutationFn: (foto: File) =>
+      subirFotoDeRanura(idImportacion, categoria, cual!, foto),
+    onSuccess: adoptar,
+    onError: (e: Error) => setAviso(e.message),
   });
 
-  // Guarda ANTES de dibujar: el backend dibuja lo que hay guardado, asi que sin
-  // esto la vista previa enseñaria la base anterior y el dueno creeria que su
-  // texto no hizo nada.
+  // Guarda antes de dibujar: el backend dibuja lo que hay guardado.
   const dibujar = useMutation({
     mutationFn: async () => {
-      await guardarEstilo(idImportacion, categoria, { recipiente, fondo });
-      return generarVistaDeEstilo(idImportacion, categoria);
+      await guardarEstilo(idImportacion, categoria, textos(texto));
+      return dibujarRanura(idImportacion, categoria, cual!);
     },
-    onSuccess: refrescar,
+    onSuccess: adoptar,
+    onError: (e: Error) => setAviso(e.message),
   });
 
-  const heredado = categoria !== "" ? general?.base : undefined;
+  const vaciar = useMutation({
+    mutationFn: () => vaciarRanura(idImportacion, categoria, cual!),
+    onSuccess: adoptar,
+    onError: (e: Error) => setAviso(e.message),
+  });
+
+  const guardar = useMutation({
+    mutationFn: () => guardarEstilo(idImportacion, categoria, textos(texto)),
+    onSuccess: (nuevo) => {
+      cliente.setQueryData(clave, nuevo);
+      setCual(null);
+    },
+    onError: (e: Error) => setAviso(e.message),
+  });
+
+  const ocupado = subir.isPending || dibujar.isPending || vaciar.isPending;
+
+  function abrir(r: CualRanura) {
+    setTexto(estilo?.[r].texto ?? "");
+    setAviso(null);
+    setCual(r);
+  }
+
+  function elegir(foto: File | undefined) {
+    if (!foto) return;
+    if (!TIPOS.includes(foto.type)) {
+      setAviso(`"${foto.name}" no es una foto.`);
+      return;
+    }
+    if (foto.size > MAX_BYTES) {
+      setAviso("La foto pesa más de 10 MB.");
+      return;
+    }
+    setAviso(null);
+    subir.mutate(foto);
+  }
+
+  const pie = !estilo ? undefined : cual ? (
+    <>
+      {estilo[cual].tocada && (
+        <button
+          className="me-auto text-[12.5px] font-medium text-muted underline underline-offset-[3px] disabled:text-apagado"
+          disabled={ocupado}
+          type="button"
+          onClick={() => vaciar.mutate()}
+        >
+          {vaciar.isPending ? "Quitando…" : "Volver al de siempre"}
+        </button>
+      )}
+      <Boton
+        disabled={ocupado || guardar.isPending}
+        onClick={() => guardar.mutate()}
+      >
+        {guardar.isPending ? "Guardando…" : "Listo"}
+      </Boton>
+    </>
+  ) : (
+    <Boton onClick={() => onAbierto(false)}>Listo</Boton>
+  );
 
   return (
     <Panel
       abierto={abierto}
+      atras={cual ? () => setCual(null) : undefined}
       descripcion={
-        <p className="text-sm text-muted">
-          {categoria
-            ? "Lo que dejes en blanco se hereda del estilo general."
-            : "Se aplica a todas tus fotos. Cada seccion puede tener el suyo."}
-        </p>
-      }
-      pie={
-        estilo && (
-          <>
-            {guardar.error && (
-              <p className="flex-1 text-xs leading-[1.4] text-bloquea">
-                {guardar.error.message}
-              </p>
-            )}
-            <Boton
-              disabled={guardar.isPending}
-              onClick={() => guardar.mutate()}
-            >
-              {guardar.isPending ? "Guardando..." : "Guardar estilo"}
-            </Boton>
-          </>
+        cual ? undefined : (
+          <p className="text-sm text-muted">
+            {categoria
+              ? `Así servimos los platos de ${categoria}.`
+              : "Así servimos tus platos."}
+          </p>
         )
       }
-      titulo={categoria ? `Estilo de ${categoria}` : "Estilo de tus fotos"}
-      onAbierto={onAbierto}
+      pie={pie}
+      titulo={
+        cual
+          ? RANURAS[cual].titulo
+          : categoria
+            ? `Estilo de ${categoria}`
+            : "Estilo de tus fotos"
+      }
+      onAbierto={(v) => {
+        if (!v) setCual(null);
+        onAbierto(v);
+      }}
     >
       {!estilo ? (
         <Girador />
+      ) : !cual ? (
+        <div className="grid grid-cols-2 gap-6">
+          {(["vajilla", "fondo"] as const).map((r) => (
+            <Resumen
+              key={r}
+              cual={r}
+              ranura={estilo[r]}
+              onCambiar={() => abrir(r)}
+            />
+          ))}
+        </div>
       ) : (
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <Label>Asi se ve tu vajilla</Label>
-            <Description>
-              {estilo.base.vista
-                ? "El plato de tus fotos, vacio. Cambia el texto de abajo y vuelve a dibujarlo."
-                : "Por defecto servimos en esto. Escribe abajo el tuyo y dibujalo para verlo."}
-            </Description>
+        <>
+          <div className="flex flex-col items-center gap-4">
+            <Vista grande cual={cual} ranura={estilo[cual]} />
 
-            <div className="flex gap-2">
-              {estilo.base.vista ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt="Tu vajilla"
-                  className="size-40 rounded-xl border border-default object-cover"
-                  // urlMedia le pone delante el host de la API. Las de por
-                  // defecto NO pasan por aqui: esas son estaticas de esta app.
-                  src={urlMedia(estilo.base.vista)}
-                />
-              ) : (
-                // Sin vista propia van las dos de siempre: el plato individual y
-                // la fuente para compartir. Son iguales para todos los
-                // restaurantes, asi que viajan con la app en vez de generarse
-                // —y cobrarse— una vez por cada uno.
-                ["plato", "fuente"].map((cual) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={cual}
-                    alt={
-                      cual === "plato"
-                        ? "Plato individual"
-                        : "Fuente para compartir"
-                    }
-                    className="size-40 rounded-xl border border-default object-cover"
-                    src={`/estilo/${cual}.jpg`}
-                  />
-                ))
-              )}
-            </div>
+            <Boton
+              ancho
+              disabled={ocupado}
+              variante="blanco"
+              onClick={() => entrada.current?.click()}
+            >
+              <Camera className="size-[17px]" />
+              {subir.isPending ? "Subiendo…" : RANURAS[cual].subir}
+            </Boton>
+            <input
+              ref={entrada}
+              accept={TIPOS.join(",")}
+              className="sr-only"
+              type="file"
+              onChange={(e) => {
+                elegir(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </div>
 
-            <div className="flex items-center gap-2">
+          <div className="mt-5">
+            <TextField value={texto} onChange={setTexto}>
+              <Label>o descríbelo</Label>
+              <Input maxLength={200} placeholder={RANURAS[cual].siempre} />
+              <Description>{RANURAS[cual].ejemplo}</Description>
+            </TextField>
+
+            <div className="mt-3 flex items-center gap-2.5">
               <Boton
-                disabled={dibujar.isPending}
+                disabled={ocupado || texto.trim() === ""}
                 tamano="sm"
                 variante="blanco"
                 onClick={() => dibujar.mutate()}
               >
-                {dibujar.isPending ? "Dibujando..." : "Dibujar mi vajilla"}
+                {dibujar.isPending ? "Dibujando…" : "Dibujarlo"}
               </Boton>
-              <span className="text-xs text-muted">
+              <span className="text-xs text-tenue">
                 Gasta una foto de tu carta.
               </span>
             </div>
-
-            {dibujar.error && (
-              <p className="text-sm text-bloquea">{dibujar.error.message}</p>
-            )}
           </div>
 
-          <Separator />
-
-          <TextField value={recipiente} onChange={setRecipiente}>
-            <Label>En que plato sirves?</Label>
-            <Input
-              placeholder={
-                heredado?.recipiente || "Plato redondo blanco (el de siempre)"
-              }
-            />
-            <Description>
-              Ej: plato de barro, bandeja de madera, bol hondo negro.
-            </Description>
-          </TextField>
-
-          <TextField value={fondo} onChange={setFondo}>
-            <Label>Sobre que fondo?</Label>
-            <Input
-              placeholder={
-                heredado?.fondo || "Fondo blanco limpio (el de siempre)"
-              }
-            />
-            <Description>
-              Ej: sobre una mesa de madera, en la playa, mantel de colores. El
-              plato sigue siendo lo enfocado.
-            </Description>
-          </TextField>
-
-          <Separator />
-
-          <div className="flex flex-col gap-2">
-            <Label>Fotos de ejemplo</Label>
-            <Description>
-              Sube una foto tuya y nos guiaremos de ella para el resto.
-            </Description>
-            <div className="flex flex-wrap gap-2">
-              {estilo.base.referencias.map((url) => (
-                <div key={url} className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    alt="Foto de ejemplo"
-                    className="size-20 rounded-lg border border-default object-cover"
-                    src={urlMedia(url)}
-                  />
-                  <Boton
-                    aria-label="Quitar esta foto de ejemplo"
-                    className="absolute -end-1.5 -top-1.5 size-6 min-w-0 rounded-full p-0"
-                    tamano="sm"
-                    onClick={async () => {
-                      await quitarReferenciaDeBase(
-                        idImportacion,
-                        categoria,
-                        url.replace(/^.*\/media\//, ""),
-                      );
-                      await refrescar();
-                    }}
-                  >
-                    <Trash2 className="size-3" />
-                  </Boton>
-                </div>
-              ))}
-              {estilo.base.referencias.length < 2 && (
-                <SubirImagen
-                  onArchivo={async (archivo) => {
-                    await subirReferenciaDeBase(
-                      idImportacion,
-                      categoria,
-                      archivo,
-                    );
-                    await refrescar();
-                  }}
-                />
-              )}
-            </div>
-          </div>
-
-          <p className="text-xs text-muted">
-            Las fotos que ya generaste no cambian. Esto se aplica a las
-            siguientes, y a las que regeneres.
-          </p>
-        </div>
+          {aviso && <p className="mt-3 text-sm text-bloquea">{aviso}</p>}
+        </>
       )}
     </Panel>
+  );
+}
+
+function Resumen({
+  cual,
+  ranura,
+  onCambiar,
+}: {
+  cual: CualRanura;
+  ranura: Ranura;
+  onCambiar: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <Vista cual={cual} ranura={ranura} />
+      <div>
+        <p className="text-sm font-medium leading-5">{RANURAS[cual].titulo}</p>
+        <p className="truncate text-xs leading-4 text-tenue">
+          {ranura.texto || RANURAS[cual].siempre}
+        </p>
+      </div>
+      <Boton ancho tamano="sm" variante="blanco" onClick={onCambiar}>
+        Cambiar
+      </Boton>
+    </div>
+  );
+}
+
+/**
+ * El fondo por defecto no tiene foto: es blanco liso con la sombra del plato.
+ * Dibujarlo aqui evita generar —y cobrar— una imagen que ya sabemos como es.
+ */
+function Vista({
+  cual,
+  ranura,
+  grande,
+}: {
+  cual: CualRanura;
+  ranura: Ranura;
+  grande?: boolean;
+}) {
+  const marco = `relative aspect-square shrink-0 overflow-hidden rounded-2xl border border-border ${
+    grande ? "w-[196px]" : "w-full"
+  }`;
+
+  if (!ranura.imagen && cual === "fondo") {
+    return (
+      <div
+        className={`${marco} grid place-items-center bg-linear-to-b from-white via-crema to-[#f3f1ed]`}
+      >
+        <div className="h-3.5 w-[62%] rounded-full bg-radial from-tinta/10 to-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${marco} bg-surface-secondary`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt={RANURAS[cual].titulo}
+        className="size-full object-cover"
+        src={ranura.imagen ? urlMedia(ranura.imagen) : "/estilo/plato.jpg"}
+      />
+      {ranura.propia && (
+        <span className="absolute start-2 top-2 rounded-full bg-white/90 px-[7px] py-1 text-[11px] font-medium leading-none text-muted">
+          tuya
+        </span>
+      )}
+    </div>
   );
 }

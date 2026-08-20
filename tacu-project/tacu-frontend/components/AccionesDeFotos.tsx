@@ -49,7 +49,7 @@ export function AccionesDeFotos({
         )
       : 0;
 
-  const estiloPropio = !!(estilo?.base.recipiente || estilo?.base.fondo);
+  const estiloPropio = !!(estilo?.vajilla.tocada || estilo?.fondo.tocada);
 
   return (
     <div className="mt-4 rounded-[14px] border border-border bg-surface px-4 py-3.5">

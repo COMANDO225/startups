@@ -1,6 +1,7 @@
 import type {
   ErrorApi,
   EstadoFotos,
+  CualRanura,
   Estilo,
   Importacion,
   ImportacionCreada,
@@ -410,20 +411,33 @@ export function reordenarPaginas(
 
 /** Con categoria devuelve la base de esa seccion, ya plegada sobre la general. */
 export function obtenerEstilo(id: string, categoria = ""): Promise<Estilo> {
-  const q = categoria ? `?categoria=${encodeURIComponent(categoria)}` : "";
-  return pedir(`/v1/importaciones/${id}/estilo${q}`, { token: conToken(id) });
+  return pedir(`/v1/importaciones/${id}/estilo${enCategoria(categoria)}`, {
+    token: conToken(id),
+  });
 }
 
+/** La categoria vacia es la general, y entonces no se manda el parametro. */
+function enCategoria(categoria: string): string {
+  return categoria ? `?categoria=${encodeURIComponent(categoria)}` : "";
+}
+
+/**
+ * Guarda los TEXTOS de las dos ranuras. Las fotos no entran por aqui: van por su
+ * propia ruta, o corregir una palabra del texto borraria la foto.
+ *
+ * Devuelve el estilo entero ya plegado, como todo lo que escribe aqui: la
+ * pantalla ensena las dos ranuras a la vez y con un 204 tendria que volver a
+ * pedirlo para pintar lo que acaba de hacer.
+ */
 export function guardarEstilo(
   id: string,
   categoria: string,
-  base: { recipiente: string; fondo: string },
-): Promise<void> {
-  const q = categoria ? `?categoria=${encodeURIComponent(categoria)}` : "";
-  return pedir(`/v1/importaciones/${id}/estilo${q}`, {
+  textos: { vajilla: string; fondo: string },
+): Promise<Estilo> {
+  return pedir(`/v1/importaciones/${id}/estilo${enCategoria(categoria)}`, {
     method: "PUT",
     token: conToken(id),
-    body: JSON.stringify(base),
+    body: JSON.stringify(textos),
     headers: { "Content-Type": "application/json" },
   });
 }
@@ -481,42 +495,41 @@ export function quitarReferenciaDePlato(
   );
 }
 
-/** Dibuja el recipiente vacio del estilo. CUESTA una foto del presupuesto. */
-export function generarVistaDeEstilo(
+/** Dibuja lo que el dueno escribio en una ranura. CUESTA una foto del presupuesto. */
+export function dibujarRanura(
   id: string,
   categoria: string,
-): Promise<{ vista: string }> {
-  const q = categoria ? `?categoria=${encodeURIComponent(categoria)}` : "";
-  return pedir(`/v1/importaciones/${id}/estilo/vista${q}`, {
-    method: "POST",
-    token: conToken(id),
-  });
+  ranura: CualRanura,
+): Promise<Estilo> {
+  return pedir(
+    `/v1/importaciones/${id}/estilo/${ranura}/dibujo${enCategoria(categoria)}`,
+    { method: "POST", token: conToken(id) },
+  );
 }
 
-export function subirReferenciaDeBase(
+/** La foto que el dueno tomo de su plato o de su mesa. Gratis e instantanea. */
+export function subirFotoDeRanura(
   id: string,
   categoria: string,
+  ranura: CualRanura,
   foto: File,
-): Promise<Referencias> {
-  const q = categoria ? `?categoria=${encodeURIComponent(categoria)}` : "";
-  return pedir(`/v1/importaciones/${id}/estilo/referencias${q}`, {
-    method: "POST",
-    token: conToken(id),
-    body: conArchivo(foto),
-  });
+): Promise<Estilo> {
+  return pedir(
+    `/v1/importaciones/${id}/estilo/${ranura}/foto${enCategoria(categoria)}`,
+    { method: "POST", token: conToken(id), body: conArchivo(foto) },
+  );
 }
 
-export function quitarReferenciaDeBase(
+/** Devuelve la ranura al de siempre: sin texto, sin foto y sin dibujo. */
+export function vaciarRanura(
   id: string,
   categoria: string,
-  clave: string,
-): Promise<Referencias> {
-  const p = new URLSearchParams({ clave });
-  if (categoria) p.set("categoria", categoria);
-  return pedir(`/v1/importaciones/${id}/estilo/referencias?${p}`, {
-    method: "DELETE",
-    token: conToken(id),
-  });
+  ranura: CualRanura,
+): Promise<Estilo> {
+  return pedir(
+    `/v1/importaciones/${id}/estilo/${ranura}${enCategoria(categoria)}`,
+    { method: "DELETE", token: conToken(id) },
+  );
 }
 
 // --- publicar ---

@@ -162,42 +162,50 @@ SELECT pg_advisory_xact_lock(hashtextextended(@importacion_id::text, 0));
 -- El ORDER BY pone la general PRIMERO para que quien recorre sepa cual es cual
 -- sin comparar cadenas: '' ordena antes que cualquier nombre de categoria.
 -- name: BaseDeFoto :many
-SELECT categoria, recipiente, fondo, referencias
+SELECT categoria,
+       recipiente, vajilla_clave, vajilla_vista_clave,
+       fondo,      fondo_clave,   fondo_vista_clave
   FROM base_foto
  WHERE restaurante_id = @restaurante_id
    AND categoria IN ('', @categoria::text)
  ORDER BY categoria;
 
+-- GuardarBaseDeFoto escribe la fila ENTERA de una categoria: las dos ranuras con
+-- su texto, su foto y su dibujo.
+--
+-- Entera y no campo a campo porque el dibujo pertenece al texto que lo produjo:
+-- un UPDATE que cambiara el texto dejando el dibujo viejo le enseniaria al dueno
+-- la vajilla anterior diciendole que es la que acaba de escribir.
 -- name: GuardarBaseDeFoto :exec
-INSERT INTO base_foto (id, restaurante_id, categoria, recipiente, fondo, referencias)
-VALUES (@id, @restaurante_id, @categoria, @recipiente, @fondo, @referencias)
+INSERT INTO base_foto (id, restaurante_id, categoria,
+                       recipiente, vajilla_clave, vajilla_vista_clave,
+                       fondo,      fondo_clave,   fondo_vista_clave)
+VALUES (@id, @restaurante_id, @categoria,
+        @recipiente, @vajilla_clave, @vajilla_vista_clave,
+        @fondo,      @fondo_clave,   @fondo_vista_clave)
 ON CONFLICT (restaurante_id, categoria) DO UPDATE
-   SET recipiente     = EXCLUDED.recipiente,
-       fondo          = EXCLUDED.fondo,
-       referencias    = EXCLUDED.referencias,
-       actualizado_at = now();
+   SET recipiente          = EXCLUDED.recipiente,
+       vajilla_clave       = EXCLUDED.vajilla_clave,
+       vajilla_vista_clave = EXCLUDED.vajilla_vista_clave,
+       fondo               = EXCLUDED.fondo,
+       fondo_clave         = EXCLUDED.fondo_clave,
+       fondo_vista_clave   = EXCLUDED.fondo_vista_clave,
+       actualizado_at      = now();
 
--- LA VISTA PREVIA de una categoria, sin plegar.
+-- EL ESTILO PROPIO de una categoria, SIN plegar.
 --
--- Al contrario que BaseDeFoto: la vista es la foto de ESTA fila. Heredar la de
--- la general enseniaria el plato del restaurante diciendo que es el de la
--- seccion, que es justo la duda que la vista existe para resolver.
+-- Al contrario que BaseDeFoto, que pliega la general por debajo: aqui se quiere
+-- lo que esta fila tiene escrito y nada mas. Lo usa quien va a ESCRIBIR —subir
+-- una foto, dibujar una ranura— porque guardar lo heredado lo convertiria en
+-- propio y la categoria dejaria de seguir a la general para siempre.
 --
--- Sin fila devuelve cero filas y eso significa "todavia no hay vista".
--- name: VistaDeBase :one
-SELECT vista_clave
+-- Sin fila devuelve cero filas: todavia no hay nada propio.
+-- name: EstiloPropio :one
+SELECT recipiente, vajilla_clave, vajilla_vista_clave,
+       fondo,      fondo_clave,   fondo_vista_clave
   FROM base_foto
  WHERE restaurante_id = @restaurante_id
    AND categoria = @categoria;
-
--- El INSERT crea la fila si el dueno pidio la vista antes de guardar nada: la
--- base queda vacia, que es lo mismo que no tenerla.
--- name: GuardarVistaDeBase :exec
-INSERT INTO base_foto (id, restaurante_id, categoria, vista_clave)
-VALUES (@id, @restaurante_id, @categoria, @vista_clave)
-ON CONFLICT (restaurante_id, categoria) DO UPDATE
-   SET vista_clave    = EXCLUDED.vista_clave,
-       actualizado_at = now();
 
 -- name: GuardarReferenciasDePlato :exec
 UPDATE plato SET foto_referencias = @referencias WHERE id = @plato_id;

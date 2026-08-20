@@ -12,15 +12,17 @@ import (
 )
 
 type BaseFoto struct {
-	ID            uuid.UUID
-	RestauranteID uuid.UUID
-	Categoria     string
-	Recipiente    string
-	Fondo         string
-	Referencias   []byte
-	CreadoAt      pgtype.Timestamptz
-	ActualizadoAt pgtype.Timestamptz
-	VistaClave    string
+	ID                uuid.UUID
+	RestauranteID     uuid.UUID
+	Categoria         string
+	Recipiente        string
+	Fondo             string
+	CreadoAt          pgtype.Timestamptz
+	ActualizadoAt     pgtype.Timestamptz
+	VajillaVistaClave string
+	VajillaClave      string
+	FondoClave        string
+	FondoVistaClave   string
 }
 
 type GastoIum struct {

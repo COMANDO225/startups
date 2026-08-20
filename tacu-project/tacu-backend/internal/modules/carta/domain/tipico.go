@@ -107,12 +107,15 @@ func (p PlatoTipico) Receta() Receta {
 // la gaseosa servida en la vajilla del restaurante. La vajilla es una
 // preferencia; que una bebida vaya en vaso es un hecho.
 //
-// El fondo y las fotos de ejemplo del dueno sobreviven en los dos casos: de eso
-// el banco no dice nada, asi que no hay con que pisarlos.
+// El fondo del dueno sobrevive en los dos casos: de eso el banco no dice nada,
+// asi que no hay con que pisarlo. Su FOTO de vajilla no: cuando el banco pone el
+// recipiente, una foto del plato del restaurante contradice al texto, y entre un
+// texto y una imagen el modelo copia la imagen.
 func (p PlatoTipico) ConLaBaseDelDueno(base Receta) Receta {
 	if p.VaEnPlato() {
 		return base.Sobre(p.Receta())
 	}
+	base.FotoVajilla = ""
 	return p.Receta().Sobre(base)
 }
 

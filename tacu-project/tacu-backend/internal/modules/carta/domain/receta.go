@@ -39,8 +39,17 @@ type Receta struct {
 	Fondo          string // lo pone el dueno
 	Ajuste         string
 
-	// Referencias son CLAVES del almacen, nunca URLs ni bytes.
+	// Referencias son CLAVES del almacen, nunca URLs ni bytes. Son las fotos de
+	// ejemplo DEL PLATO: "asi se ve mi ceviche". Hablan de la comida.
 	Referencias []string
+
+	// FotoVajilla y FotoFondo son las fotos que el dueno subio de SU vajilla y
+	// de SU fondo. Tienen campo propio y no van en Referencias porque el prompt
+	// las nombra POR POSICION —"la primera imagen es el plato exacto"— y una
+	// bolsa sin roles no se puede nombrar: el modelo recibia dos imagenes
+	// mudas y tenia que adivinar si copiaba el plato, la mesa o la comida.
+	FotoVajilla string
+	FotoFondo   string
 }
 
 // Sobre pliega esta receta encima de otra, campo por campo: lo relleno gana, lo
@@ -60,6 +69,8 @@ func (r Receta) Sobre(base Receta) Receta {
 		{&r.Marca, &fuera.Marca},
 		{&r.Acompanamiento, &fuera.Acompanamiento},
 		{&r.Fondo, &fuera.Fondo},
+		{&r.FotoVajilla, &fuera.FotoVajilla},
+		{&r.FotoFondo, &fuera.FotoFondo},
 		{&r.Ajuste, &fuera.Ajuste},
 	} {
 		if strings.TrimSpace(*c.nuevo) != "" {
@@ -100,6 +111,14 @@ type EncargoDeFoto struct {
 func Ensamblar(tipo, base, formato, ajuste Receta) Receta {
 	r := tipo
 	r = base.Sobre(r)
+
+	// El formato manda sobre el recipiente, y se lleva la foto con el: si esto
+	// va en fuente, la foto del plato individual del dueno CONTRADICE al texto,
+	// y de las dos cosas el modelo copia la imagen. Una foto sin su texto es
+	// peor que ninguna.
+	if strings.TrimSpace(formato.Recipiente) != "" {
+		r.FotoVajilla = ""
+	}
 	r = formato.Sobre(r)
 	return ajuste.Sobre(r)
 }

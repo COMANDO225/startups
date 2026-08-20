@@ -62,7 +62,7 @@ type Handler struct {
 	fotos       GeneradorDeFotos
 	editar      EditorDePlato
 	estilo      Estilista
-	vista       Vistista
+	negocio     Negocio
 	referencias GestorDeReferencias
 	paginas     GestorDePaginas
 	reconocedor Reconocedor
@@ -85,13 +85,13 @@ type Handler struct {
 }
 
 func NuevoHandler(importar *app.Importar, lector Lector, encolador Encolador,
-	fotos GeneradorDeFotos, editar EditorDePlato, estilo Estilista, vista Vistista,
+	fotos GeneradorDeFotos, editar EditorDePlato, negocio Negocio, estilo Estilista,
 	referencias GestorDeReferencias, paginas GestorDePaginas, reconocedor Reconocedor,
 	publicador Publicador, repo Guardador, url URLDeClave,
 	log *slog.Logger, sincrono bool, maxSubidaMB int, porFotoUSD float64) *Handler {
 	return &Handler{
 		importar: importar, lector: lector, encolador: encolador,
-		fotos: fotos, editar: editar, estilo: estilo, vista: vista, referencias: referencias,
+		fotos: fotos, editar: editar, negocio: negocio, estilo: estilo, referencias: referencias,
 		paginas: paginas, reconocedor: reconocedor, publicador: publicador,
 		repo: repo, url: url, log: log,
 		sincrono: sincrono, maxSubidaBytes: int64(maxSubidaMB) * 1024 * 1024,

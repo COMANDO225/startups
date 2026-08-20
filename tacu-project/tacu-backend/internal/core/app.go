@@ -205,7 +205,7 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 
 	// La vista previa del estilo usa el MISMO generador que las fotos de los
 	// platos: si saliera de otro modelo dejaria de predecir lo que va a salir.
-	vista := app.NuevaVista(repo, alm, worker.NuevoGeneradorIA(ia, alm, log),
+	estilo := app.NuevoEstilo(repo, alm, worker.NuevoGeneradorIA(ia, alm, log),
 		postgres.ConImportacion, costoFoto)
 	fotos := app.NuevasFotos(repo, encolador{cola, log}, alm)
 	editar := app.NuevoEditar(repo)
@@ -214,7 +214,7 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	publicar := app.NuevoPublicar(repo)
 
 	handler := cartahttp.NuevoHandler(
-		importar, lector, encolador{cola, log}, fotos, editar, repo, vista, referencias, paginas,
+		importar, lector, encolador{cola, log}, fotos, editar, repo, estilo, referencias, paginas,
 		conocedor, publicar, repo, alm.URL, log,
 		cfg.Servidor.LeerCartaSincrono, cfg.Servidor.TamanoMaxSubidaMB, costoFoto.Dolares(),
 	)

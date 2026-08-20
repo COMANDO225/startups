@@ -204,7 +204,7 @@ func montar(t *testing.T, sincrono bool, lector *lectorFalso) *entorno {
 	paginas := &paginasFalsas{}
 	h := NuevoHandler(
 		app.NuevoImportar(repo, disco, dinero.USD(3.00)),
-		lector, cola, &fotosFalsas{}, &editorFalso{}, &estiloFalso{}, &vistaFalsa{}, &referenciasFalsas{},
+		lector, cola, &fotosFalsas{}, &editorFalso{}, &negocioFalso{}, &estiloFalso{}, &referenciasFalsas{},
 		paginas, &reconocedorFalso{}, &publicadorFalso{},
 		repo, disco.URL,
 		slog.New(slog.DiscardHandler),
@@ -238,20 +238,33 @@ func (editorFalso) Etiquetas(context.Context, id.ID, []string) (domain.Plato, do
 func (editorFalso) Quitar(context.Context, id.ID) error    { return nil }
 func (editorFalso) Recuperar(context.Context, id.ID) error { return nil }
 
+type negocioFalso struct{}
+
+func (negocioFalso) Base(context.Context, id.ID, string) ([]domain.Tipo, domain.Estilo, error) {
+	return []domain.Tipo{domain.Generico}, domain.Estilo{}, nil
+}
+func (negocioFalso) GuardarTipos(context.Context, id.ID, []domain.Tipo) error { return nil }
+
+// estiloFalso no dibuja: dibujar cuesta una llamada de imagen. Lo que se
+// ejercita aqui es el borde —el id, el permiso, la ranura— no el modelo.
 type estiloFalso struct{}
 
-func (estiloFalso) Base(context.Context, id.ID, string) ([]domain.Tipo, domain.Receta, error) {
-	return []domain.Tipo{domain.Generico}, domain.Receta{}, nil
+func (estiloFalso) Leer(context.Context, id.ID, string) (domain.Estilo, error) {
+	return domain.Estilo{}, nil
 }
-func (estiloFalso) GuardarBase(context.Context, id.ID, string, domain.Receta) error { return nil }
+func (estiloFalso) GuardarTextos(context.Context, id.ID, string, string, string) error { return nil }
 
-// La vista previa del estilo no se dibuja en los tests: cuesta una llamada de
-// imagen. Lo que se ejercita es el borde, no el modelo.
-type vistaFalsa struct{}
+func (estiloFalso) SubirFoto(context.Context, id.ID, string, string, []byte, string) (domain.Estilo, error) {
+	return domain.Estilo{Vajilla: domain.Ranura{Foto: "estilo/x.jpg"}}, nil
+}
 
-func (vistaFalsa) Clave(context.Context, id.ID, string) (string, error)      { return "", nil }
-func (vistaFalsa) Generar(context.Context, id.ID, string) (string, error)    { return "estilo/x.jpg", nil }
-func (estiloFalso) GuardarTipos(context.Context, id.ID, []domain.Tipo) error { return nil }
+func (estiloFalso) Vaciar(context.Context, id.ID, string, string) (domain.Estilo, error) {
+	return domain.Estilo{}, nil
+}
+
+func (estiloFalso) Dibujar(context.Context, id.ID, string, string) (domain.Estilo, error) {
+	return domain.Estilo{Vajilla: domain.Ranura{Vista: "estilo/x.jpg"}}, nil
+}
 
 type referenciasFalsas struct{}
 
@@ -259,12 +272,6 @@ func (referenciasFalsas) AgregarAPlato(context.Context, id.ID, []byte, string) (
 	return nil, nil
 }
 func (referenciasFalsas) QuitarDePlato(context.Context, id.ID, string) ([]string, error) {
-	return nil, nil
-}
-func (referenciasFalsas) AgregarABase(context.Context, id.ID, string, []byte, string) ([]string, error) {
-	return nil, nil
-}
-func (referenciasFalsas) QuitarDeBase(context.Context, id.ID, string, string) ([]string, error) {
 	return nil, nil
 }
 

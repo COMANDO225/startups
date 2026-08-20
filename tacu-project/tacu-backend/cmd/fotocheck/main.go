@@ -248,7 +248,14 @@ func generar(o opciones, modelo string, n int) corrida {
 		return c
 	}
 
-	base := domain.Receta{Fondo: o.fondo, Recipiente: o.recipiente}
+	// El estilo del dueno, que es de donde sale su capa de la receta. Se arma
+	// como en produccion y no a mano: el laboratorio tiene que medir lo que
+	// corre de verdad, plegado incluido.
+	estilo := domain.Estilo{
+		Vajilla: domain.Ranura{Texto: o.recipiente},
+		Fondo:   domain.Ranura{Texto: o.fondo},
+	}
+	base := estilo.Receta()
 	if o.tipico != "" {
 		delBanco, err := tipicoDelBanco(ctx, o.tipico)
 		if err != nil {
@@ -267,7 +274,7 @@ func generar(o opciones, modelo string, n int) corrida {
 		base,
 	)
 	if o.vajilla {
-		prompt = app.PromptDeVajilla(base)
+		prompt = app.PromptDeVajilla(estilo)
 	}
 
 	var referencias []ai.Imagen

@@ -25,7 +25,7 @@ import (
 // las ranuras; camara, luz y encuadre son iguales y son lo que hace que 60 fotos
 // parezcan del mismo sitio. LO QUE NO TIENE RANURA ES LO QUE EL DUENO NO PUEDE
 // ROMPER.
-const plantilla = `Product photograph for a food delivery app menu card. Plain catalog photo of one real restaurant serving.
+const plantilla = `Product photograph for a food delivery app menu card. Plain catalog photo of one real restaurant serving.%s
 
 MAIN SUBJECT — exactly this and nothing more: %s%s%s
 
@@ -71,20 +71,50 @@ The piece is empty and clean: no food, no drink, no sauce, no crumbs, no garnish
 const vajillaPorDefecto = "a plain white round ceramic restaurant dinner plate, the ordinary one a " +
 	"Peruvian restaurant serves a main course on."
 
-// PromptDeVajilla dibuja el recipiente de la base, vacio.
+// plantillaFondo dibuja la OTRA ranura: la superficie, sola y sin nada encima.
 //
-// Solo mira recipiente y fondo: son las dos cosas que el dueno configura. El
-// texto suyo viaja en espanol sin traducir, como el ajuste de un plato.
-func PromptDeVajilla(base domain.Receta) string {
-	pieza := strings.TrimSpace(base.Recipiente)
-	if pieza == "" {
-		pieza = vajillaPorDefecto
+// Sin plato a proposito, aunque tener uno delante se vea mas bonito: la vista
+// previa de una ranura tiene que ensenar ESA ranura. Con un plato encima, el
+// dueno que no reconoce lo que ve no sabria cual de las dos cosas fallo.
+const plantillaFondo = `Photograph of an EMPTY table surface in a restaurant, seen slightly from above at a 45-degree angle. This is a picture of the surface itself: there is no food, no drink, no plate, no bowl, no cutlery, no napkin and no hands anywhere in it.
+
+THE SURFACE — exactly this and nothing else: %s
+
+CAMERA AND LIGHT: 50mm lens, f/8, everything in focus front to back. Even soft diffused light from the upper left, neutral white balance, gentle contrast, no dramatic shading. The real colour, material and texture of the surface are clearly visible.
+
+FRAMING: square 1:1 crop, filled edge to edge by the surface.
+
+There is no text and no logo anywhere in the picture.`
+
+// PromptDeVajilla dibuja el recipiente del dueno, vacio.
+//
+// El texto suyo viaja en espanol sin traducir, como el ajuste de un plato.
+func PromptDeVajilla(e domain.Estilo) string {
+	return fmt.Sprintf(plantillaVajilla, TextoDeVajilla(e), TextoDeFondo(e))
+}
+
+// PromptDeFondo dibuja la superficie del dueno, sola.
+func PromptDeFondo(e domain.Estilo) string {
+	return fmt.Sprintf(plantillaFondo, TextoDeFondo(e))
+}
+
+// TextoDeVajilla y TextoDeFondo resuelven el texto con su por defecto.
+//
+// Son publicas porque el por defecto TIENE que decir lo mismo aqui que en el
+// placeholder de la pantalla: si no, la vista previa ensena una cosa y las fotos
+// salen con otra.
+func TextoDeVajilla(e domain.Estilo) string {
+	if t := strings.TrimSpace(e.Vajilla.Texto); t != "" {
+		return t
 	}
-	fondo := strings.TrimSpace(base.Fondo)
-	if fondo == "" {
-		fondo = fondoPorDefecto
+	return vajillaPorDefecto
+}
+
+func TextoDeFondo(e domain.Estilo) string {
+	if t := strings.TrimSpace(e.Fondo.Texto); t != "" {
+		return t
 	}
-	return fmt.Sprintf(plantillaVajilla, pieza, fondo)
+	return fondoPorDefecto
 }
 
 // El fondo blanco de catalogo. Es lo unico del ambiente que el dueno puede
@@ -165,7 +195,10 @@ func recetaDePorcion(porcion domain.Porcion) domain.Receta {
 func PromptFoto(p domain.Plato, tipos []domain.Tipo, base domain.Receta) string {
 	r := recetaDePlato(p, tipos, base)
 
+	_, dice := referenciasOrdenadas(r)
+
 	return fmt.Sprintf(plantilla,
+		dice,
 		sujetoConIdentidad(r),
 		detalleDe(p),
 		ajusteDelDueno(r.Ajuste),
@@ -226,9 +259,53 @@ SECOND CONTAINER — separate, behind and to one side, partly inside the frame: 
 // modelo y devolvia un rostizado de supermercado.
 const identidadDelPolloALaBrasa = `WHAT THE CHICKEN LOOKS LIKE: Peruvian charcoal-roasted chicken. The bird is plump, fat and heavy-bodied, with thick meat under the skin, clearly meatier than a lean supermarket chicken. The skin is deep reddish brown, close to mahogany, clearly darker than pale golden roast chicken. The colour is even and appetising across the whole bird, warm reddish brown everywhere, with only a few small toasted spots on the wing tips and the edges. A fine dark spice rub is visible on the surface. The skin is cooked and burnished, never blackened, never burnt, never sooty. The skin is glossy and wet-looking with its own rendered juices, catching the light in bright highlights along the breast and the thighs, so the bird reads as juicy and freshly out of the oven, still dripping a little. Not dry, not matte. Always bone-in and skin-on, never sliced, never carved into fillets, never shredded.`
 
-// Referencias devuelve las claves ya plegadas: primero las del plato.
+// Referencias devuelve las claves de las imagenes de entrada EN EL ORDEN en que
+// el prompt las nombra.
 func Referencias(p domain.Plato, tipos []domain.Tipo, base domain.Receta) []string {
-	return recetaDePlato(p, tipos, base).Referencias
+	claves, _ := referenciasOrdenadas(recetaDePlato(p, tipos, base))
+	return claves
+}
+
+// referenciasOrdenadas devuelve las claves y el parrafo que las nombra, LOS DOS
+// A LA VEZ.
+//
+// Salen juntos porque el orden es el contrato: el parrafo dice "reference image
+// 1" y "reference image 2", y quien manda los bytes es otro archivo. Si se
+// escribieran por separado, el dia que alguien anada una clase de referencia el
+// modelo copiaria el fondo creyendo que es el plato, y nada fallaria: saldrian
+// 74 fotos mal.
+//
+// Antes no habia parrafo: las imagenes viajaban mudas delante del prompt y el
+// modelo adivinaba que era cada una.
+func referenciasOrdenadas(r domain.Receta) ([]string, string) {
+	var claves []string
+	var lineas []string
+
+	di := func(clave, que string) {
+		claves = append(claves, clave)
+		lineas = append(lineas, fmt.Sprintf("Reference image %d %s", len(claves), que))
+	}
+
+	if r.FotoVajilla != "" {
+		di(r.FotoVajilla, "is a photograph of the exact piece of tableware this serving has to "+
+			"be presented on. Copy that piece: its shape, its colour, its material, its rim and "+
+			"its proportions. Ignore whatever that photograph happens to contain and ignore its "+
+			"background: what matters there is the piece itself.")
+	}
+	if r.FotoFondo != "" {
+		di(r.FotoFondo, "is a photograph of the exact surface this has to stand on. Copy that "+
+			"surface: its colour, its material and its texture. Ignore anything resting on it.")
+	}
+	for _, c := range r.Referencias {
+		di(c, "is a photograph of this same dish as this restaurant really serves it. Follow it "+
+			"for what the food itself looks like: its ingredients, its colour and how it is piled.")
+	}
+
+	if len(lineas) == 0 {
+		return nil, ""
+	}
+	return claves, "\n\nREFERENCE IMAGES — the pictures that arrive before this text, in this order:\n" +
+		strings.Join(lineas, "\n")
 }
 
 // seccion envuelve una ranura opcional sin dejar cabeceras huerfanas.

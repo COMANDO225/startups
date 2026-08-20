@@ -64,7 +64,7 @@ func (h *Handler) obtenerTipos(c fiber.Ctx) error {
 		return traducirError(c, err)
 	}
 
-	elegidos, _, err := h.estilo.Base(c.Context(), impID, "")
+	elegidos, _, err := h.negocio.Base(c.Context(), impID, "")
 	if err != nil {
 		return traducirError(c, err)
 	}

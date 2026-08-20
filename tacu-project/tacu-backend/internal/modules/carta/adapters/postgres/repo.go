@@ -572,7 +572,7 @@ func (r *Repo) ReclamarFoto(ctx context.Context, platoID, importacionID id.ID) (
 		if err != nil {
 			return err
 		}
-		encargo.Base = tipico.ConLaBaseDelDueno(base)
+		encargo.Base = tipico.ConLaBaseDelDueno(base.Receta())
 		return nil
 	})
 	return encargo, mio, err
@@ -710,24 +710,32 @@ func (r *Repo) GuardarPlatosTipicos(ctx context.Context, platos []domain.PlatoTi
 
 // Pliega la base general con el override de la categoria. La consulta devuelve
 // la general primero, asi que basta con plegar en orden.
-func baseDeFoto(ctx context.Context, q *cartadb.Queries, restauranteID id.ID, categoria string) (domain.Receta, error) {
+func baseDeFoto(ctx context.Context, q *cartadb.Queries, restauranteID id.ID, categoria string) (domain.Estilo, error) {
 	filas, err := q.BaseDeFoto(ctx, cartadb.BaseDeFotoParams{
 		RestauranteID: restauranteID,
 		Categoria:     categoria,
 	})
 	if err != nil {
-		return domain.Receta{}, fmt.Errorf("leyendo la base de fotos: %w", err)
+		return domain.Estilo{}, fmt.Errorf("leyendo la base de fotos: %w", err)
 	}
 
-	var base domain.Receta
+	var estilo domain.Estilo
 	for _, f := range filas {
-		base = domain.Receta{
-			Recipiente:  f.Recipiente,
-			Fondo:       f.Fondo,
-			Referencias: claves(f.Referencias),
-		}.Sobre(base)
+		estilo = estiloDeFila(f.Recipiente, f.VajillaClave, f.VajillaVistaClave,
+			f.Fondo, f.FondoClave, f.FondoVistaClave).Sobre(estilo)
 	}
-	return base, nil
+	return estilo, nil
+}
+
+// estiloDeFila arma las dos ranuras desde las seis columnas. Una sola funcion
+// para las dos lecturas —la plegada y la propia— o el dia que una ranura gane un
+// campo habria que acordarse de dos sitios.
+func estiloDeFila(recipiente, vajillaClave, vajillaVista,
+	fondo, fondoClave, fondoVista string) domain.Estilo {
+	return domain.Estilo{
+		Vajilla: domain.Ranura{Texto: recipiente, Foto: vajillaClave, Vista: vajillaVista},
+		Fondo:   domain.Ranura{Texto: fondo, Foto: fondoClave, Vista: fondoVista},
+	}
 }
 
 // Una lista rota no puede tumbar la generacion: se trata como si no hubiera.
@@ -1022,7 +1030,7 @@ func comoTexto(tipos []domain.Tipo) []string {
 
 // GuardarBase guarda el estilo del restaurante o de una categoria. categoria
 // vacia es la base general.
-func (r *Repo) GuardarBase(ctx context.Context, importacionID id.ID, categoria string, base domain.Receta) error {
+func (r *Repo) GuardarBase(ctx context.Context, importacionID id.ID, categoria string, e domain.Estilo) error {
 	rest, err := r.q.RestauranteDeImportacion(ctx, importacionID)
 	if err != nil {
 		if db.SinFilas(err) {
@@ -1030,76 +1038,59 @@ func (r *Repo) GuardarBase(ctx context.Context, importacionID id.ID, categoria s
 		}
 		return fmt.Errorf("leyendo el restaurante: %w", err)
 	}
-	refs, err := json.Marshal(base.Referencias)
-	if err != nil {
-		return fmt.Errorf("serializando las referencias: %w", err)
-	}
 	return r.q.GuardarBaseDeFoto(ctx, cartadb.GuardarBaseDeFotoParams{
-		ID:            id.Nuevo(),
+		ID:                id.Nuevo(),
+		RestauranteID:     rest.ID,
+		Categoria:         categoria,
+		Recipiente:        e.Vajilla.Texto,
+		VajillaClave:      e.Vajilla.Foto,
+		VajillaVistaClave: e.Vajilla.Vista,
+		Fondo:             e.Fondo.Texto,
+		FondoClave:        e.Fondo.Foto,
+		FondoVistaClave:   e.Fondo.Vista,
+	})
+}
+
+// EstiloPropio devuelve lo que ESTA categoria tiene escrito, sin heredar nada.
+//
+// Existe para escribir: quien sube una foto o dibuja una ranura tiene que
+// guardar sobre lo propio. Guardando sobre lo plegado, la primera foto que
+// subiera una categoria le copiaria dentro todo el texto de la general y esa
+// categoria dejaria de seguirla para siempre.
+func (r *Repo) EstiloPropio(ctx context.Context, importacionID id.ID, categoria string) (domain.Estilo, error) {
+	rest, err := r.q.RestauranteDeImportacion(ctx, importacionID)
+	if err != nil {
+		if db.SinFilas(err) {
+			return domain.Estilo{}, ErrNoExiste
+		}
+		return domain.Estilo{}, fmt.Errorf("leyendo el restaurante: %w", err)
+	}
+
+	f, err := r.q.EstiloPropio(ctx, cartadb.EstiloPropioParams{
 		RestauranteID: rest.ID,
 		Categoria:     categoria,
-		Recipiente:    base.Recipiente,
-		Fondo:         base.Fondo,
-		Referencias:   refs,
 	})
+	if err != nil {
+		if db.SinFilas(err) {
+			return domain.Estilo{}, nil // todavia no hay nada propio
+		}
+		return domain.Estilo{}, fmt.Errorf("leyendo el estilo propio: %w", err)
+	}
+	return estiloDeFila(f.Recipiente, f.VajillaClave, f.VajillaVistaClave,
+		f.Fondo, f.FondoClave, f.FondoVistaClave), nil
 }
 
 // Base devuelve el estilo ya plegado para una categoria, y los tipos del negocio.
-func (r *Repo) Base(ctx context.Context, importacionID id.ID, categoria string) ([]domain.Tipo, domain.Receta, error) {
+func (r *Repo) Base(ctx context.Context, importacionID id.ID, categoria string) ([]domain.Tipo, domain.Estilo, error) {
 	rest, err := r.q.RestauranteDeImportacion(ctx, importacionID)
 	if err != nil {
 		if db.SinFilas(err) {
-			return nil, domain.Receta{}, ErrNoExiste
+			return nil, domain.Estilo{}, ErrNoExiste
 		}
-		return nil, domain.Receta{}, fmt.Errorf("leyendo el restaurante: %w", err)
+		return nil, domain.Estilo{}, fmt.Errorf("leyendo el restaurante: %w", err)
 	}
-	base, err := baseDeFoto(ctx, r.q, rest.ID, categoria)
-	return domain.TiposValidos(claves(rest.Tipos)), base, err
-}
-
-// VistaDeBase devuelve la clave de la vista previa del estilo, o vacio si esta
-// categoria no tiene ninguna generada.
-//
-// No hereda de la general a proposito: ver el plato del restaurante rotulado
-// como el de la seccion es exactamente la confusion que la vista existe para
-// evitar.
-func (r *Repo) VistaDeBase(ctx context.Context, importacionID id.ID, categoria string) (string, error) {
-	rest, err := r.q.RestauranteDeImportacion(ctx, importacionID)
-	if err != nil {
-		if db.SinFilas(err) {
-			return "", ErrNoExiste
-		}
-		return "", fmt.Errorf("leyendo el restaurante: %w", err)
-	}
-
-	clave, err := r.q.VistaDeBase(ctx, cartadb.VistaDeBaseParams{
-		RestauranteID: rest.ID,
-		Categoria:     categoria,
-	})
-	if err != nil {
-		if db.SinFilas(err) {
-			return "", nil // todavia no hay estilo guardado para esta categoria
-		}
-		return "", fmt.Errorf("leyendo la vista del estilo: %w", err)
-	}
-	return clave, nil
-}
-
-func (r *Repo) GuardarVistaDeBase(ctx context.Context, importacionID id.ID, categoria, clave string) error {
-	rest, err := r.q.RestauranteDeImportacion(ctx, importacionID)
-	if err != nil {
-		if db.SinFilas(err) {
-			return ErrNoExiste
-		}
-		return fmt.Errorf("leyendo el restaurante: %w", err)
-	}
-
-	return r.q.GuardarVistaDeBase(ctx, cartadb.GuardarVistaDeBaseParams{
-		ID:            id.Nuevo(),
-		RestauranteID: rest.ID,
-		Categoria:     categoria,
-		VistaClave:    clave,
-	})
+	estilo, err := baseDeFoto(ctx, r.q, rest.ID, categoria)
+	return domain.TiposValidos(claves(rest.Tipos)), estilo, err
 }
 
 // GuardarAjusteFoto guarda la correccion que el dueno escribio para la foto de

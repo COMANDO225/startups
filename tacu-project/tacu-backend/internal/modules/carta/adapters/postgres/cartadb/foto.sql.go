@@ -13,7 +13,9 @@ import (
 )
 
 const baseDeFoto = `-- name: BaseDeFoto :many
-SELECT categoria, recipiente, fondo, referencias
+SELECT categoria,
+       recipiente, vajilla_clave, vajilla_vista_clave,
+       fondo,      fondo_clave,   fondo_vista_clave
   FROM base_foto
  WHERE restaurante_id = $1
    AND categoria IN ('', $2::text)
@@ -26,10 +28,13 @@ type BaseDeFotoParams struct {
 }
 
 type BaseDeFotoRow struct {
-	Categoria   string
-	Recipiente  string
-	Fondo       string
-	Referencias []byte
+	Categoria         string
+	Recipiente        string
+	VajillaClave      string
+	VajillaVistaClave string
+	Fondo             string
+	FondoClave        string
+	FondoVistaClave   string
 }
 
 // LA BASE DE UNA CATEGORIA, en una sola consulta.
@@ -53,8 +58,11 @@ func (q *Queries) BaseDeFoto(ctx context.Context, arg BaseDeFotoParams) ([]BaseD
 		if err := rows.Scan(
 			&i.Categoria,
 			&i.Recipiente,
+			&i.VajillaClave,
+			&i.VajillaVistaClave,
 			&i.Fondo,
-			&i.Referencias,
+			&i.FondoClave,
+			&i.FondoVistaClave,
 		); err != nil {
 			return nil, err
 		}
@@ -81,6 +89,50 @@ func (q *Queries) BloquearImportacion(ctx context.Context, importacionID string)
 	return err
 }
 
+const estiloPropio = `-- name: EstiloPropio :one
+SELECT recipiente, vajilla_clave, vajilla_vista_clave,
+       fondo,      fondo_clave,   fondo_vista_clave
+  FROM base_foto
+ WHERE restaurante_id = $1
+   AND categoria = $2
+`
+
+type EstiloPropioParams struct {
+	RestauranteID uuid.UUID
+	Categoria     string
+}
+
+type EstiloPropioRow struct {
+	Recipiente        string
+	VajillaClave      string
+	VajillaVistaClave string
+	Fondo             string
+	FondoClave        string
+	FondoVistaClave   string
+}
+
+// EL ESTILO PROPIO de una categoria, SIN plegar.
+//
+// Al contrario que BaseDeFoto, que pliega la general por debajo: aqui se quiere
+// lo que esta fila tiene escrito y nada mas. Lo usa quien va a ESCRIBIR —subir
+// una foto, dibujar una ranura— porque guardar lo heredado lo convertiria en
+// propio y la categoria dejaria de seguir a la general para siempre.
+//
+// Sin fila devuelve cero filas: todavia no hay nada propio.
+func (q *Queries) EstiloPropio(ctx context.Context, arg EstiloPropioParams) (EstiloPropioRow, error) {
+	row := q.db.QueryRow(ctx, estiloPropio, arg.RestauranteID, arg.Categoria)
+	var i EstiloPropioRow
+	err := row.Scan(
+		&i.Recipiente,
+		&i.VajillaClave,
+		&i.VajillaVistaClave,
+		&i.Fondo,
+		&i.FondoClave,
+		&i.FondoVistaClave,
+	)
+	return i, err
+}
+
 const guardarAjusteFoto = `-- name: GuardarAjusteFoto :exec
 UPDATE plato SET foto_ajuste = $1 WHERE id = $2
 `
@@ -102,32 +154,51 @@ func (q *Queries) GuardarAjusteFoto(ctx context.Context, arg GuardarAjusteFotoPa
 }
 
 const guardarBaseDeFoto = `-- name: GuardarBaseDeFoto :exec
-INSERT INTO base_foto (id, restaurante_id, categoria, recipiente, fondo, referencias)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO base_foto (id, restaurante_id, categoria,
+                       recipiente, vajilla_clave, vajilla_vista_clave,
+                       fondo,      fondo_clave,   fondo_vista_clave)
+VALUES ($1, $2, $3,
+        $4, $5, $6,
+        $7,      $8,   $9)
 ON CONFLICT (restaurante_id, categoria) DO UPDATE
-   SET recipiente     = EXCLUDED.recipiente,
-       fondo          = EXCLUDED.fondo,
-       referencias    = EXCLUDED.referencias,
-       actualizado_at = now()
+   SET recipiente          = EXCLUDED.recipiente,
+       vajilla_clave       = EXCLUDED.vajilla_clave,
+       vajilla_vista_clave = EXCLUDED.vajilla_vista_clave,
+       fondo               = EXCLUDED.fondo,
+       fondo_clave         = EXCLUDED.fondo_clave,
+       fondo_vista_clave   = EXCLUDED.fondo_vista_clave,
+       actualizado_at      = now()
 `
 
 type GuardarBaseDeFotoParams struct {
-	ID            uuid.UUID
-	RestauranteID uuid.UUID
-	Categoria     string
-	Recipiente    string
-	Fondo         string
-	Referencias   []byte
+	ID                uuid.UUID
+	RestauranteID     uuid.UUID
+	Categoria         string
+	Recipiente        string
+	VajillaClave      string
+	VajillaVistaClave string
+	Fondo             string
+	FondoClave        string
+	FondoVistaClave   string
 }
 
+// GuardarBaseDeFoto escribe la fila ENTERA de una categoria: las dos ranuras con
+// su texto, su foto y su dibujo.
+//
+// Entera y no campo a campo porque el dibujo pertenece al texto que lo produjo:
+// un UPDATE que cambiara el texto dejando el dibujo viejo le enseniaria al dueno
+// la vajilla anterior diciendole que es la que acaba de escribir.
 func (q *Queries) GuardarBaseDeFoto(ctx context.Context, arg GuardarBaseDeFotoParams) error {
 	_, err := q.db.Exec(ctx, guardarBaseDeFoto,
 		arg.ID,
 		arg.RestauranteID,
 		arg.Categoria,
 		arg.Recipiente,
+		arg.VajillaClave,
+		arg.VajillaVistaClave,
 		arg.Fondo,
-		arg.Referencias,
+		arg.FondoClave,
+		arg.FondoVistaClave,
 	)
 	return err
 }
@@ -157,33 +228,6 @@ type GuardarTiposDeRestauranteParams struct {
 
 func (q *Queries) GuardarTiposDeRestaurante(ctx context.Context, arg GuardarTiposDeRestauranteParams) error {
 	_, err := q.db.Exec(ctx, guardarTiposDeRestaurante, arg.Tipos, arg.ID)
-	return err
-}
-
-const guardarVistaDeBase = `-- name: GuardarVistaDeBase :exec
-INSERT INTO base_foto (id, restaurante_id, categoria, vista_clave)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (restaurante_id, categoria) DO UPDATE
-   SET vista_clave    = EXCLUDED.vista_clave,
-       actualizado_at = now()
-`
-
-type GuardarVistaDeBaseParams struct {
-	ID            uuid.UUID
-	RestauranteID uuid.UUID
-	Categoria     string
-	VistaClave    string
-}
-
-// El INSERT crea la fila si el dueno pidio la vista antes de guardar nada: la
-// base queda vacia, que es lo mismo que no tenerla.
-func (q *Queries) GuardarVistaDeBase(ctx context.Context, arg GuardarVistaDeBaseParams) error {
-	_, err := q.db.Exec(ctx, guardarVistaDeBase,
-		arg.ID,
-		arg.RestauranteID,
-		arg.Categoria,
-		arg.VistaClave,
-	)
 	return err
 }
 
@@ -484,30 +528,4 @@ func (q *Queries) RestauranteDeImportacion(ctx context.Context, importacionID uu
 	var i RestauranteDeImportacionRow
 	err := row.Scan(&i.ID, &i.Tipos)
 	return i, err
-}
-
-const vistaDeBase = `-- name: VistaDeBase :one
-SELECT vista_clave
-  FROM base_foto
- WHERE restaurante_id = $1
-   AND categoria = $2
-`
-
-type VistaDeBaseParams struct {
-	RestauranteID uuid.UUID
-	Categoria     string
-}
-
-// LA VISTA PREVIA de una categoria, sin plegar.
-//
-// Al contrario que BaseDeFoto: la vista es la foto de ESTA fila. Heredar la de
-// la general enseniaria el plato del restaurante diciendo que es el de la
-// seccion, que es justo la duda que la vista existe para resolver.
-//
-// Sin fila devuelve cero filas y eso significa "todavia no hay vista".
-func (q *Queries) VistaDeBase(ctx context.Context, arg VistaDeBaseParams) (string, error) {
-	row := q.db.QueryRow(ctx, vistaDeBase, arg.RestauranteID, arg.Categoria)
-	var vista_clave string
-	err := row.Scan(&vista_clave)
-	return vista_clave, err
 }

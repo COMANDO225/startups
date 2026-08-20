@@ -16,11 +16,10 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"image"
 	"image/jpeg"
 	"os"
 	"path/filepath"
-
-	"github.com/gen2brain/webp"
 
 	"tacu-backend/internal/platform/imagen"
 )
@@ -39,6 +38,8 @@ type medida struct {
 func main() {
 	salida := flag.String("salida", "", "carpeta donde dejar las variantes para mirarlas a ojo")
 	calidadJPEG := flag.Int("jpeg", 82, "calidad del JPEG con el que se compara")
+	calidadWebP := flag.Int("webp", 80, "calidad de WebP")
+	metodo := flag.Int("metodo", 6, "esfuerzo de WebP, 0 rapido y 6 lento")
 	flag.Parse()
 
 	if flag.NArg() == 0 {
@@ -57,7 +58,7 @@ func main() {
 	var total medida
 	n := 0
 	for _, ruta := range flag.Args() {
-		m, err := medir(ruta, *calidadJPEG, *salida)
+		m, err := medir(ruta, *calidadJPEG, *calidadWebP, *metodo, *salida)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %v\n", ruta, err)
 			continue
@@ -86,34 +87,42 @@ func main() {
 		fotosPorVista, antes/(1024*1024), despues/(1024*1024), antes/despues)
 }
 
-func medir(ruta string, calidadJPEG int, salida string) (medida, error) {
+func medir(ruta string, calidadJPEG, calidadWebP, metodo int, salida string) (medida, error) {
 	b, err := os.ReadFile(ruta)
 	if err != nil {
 		return medida{}, err
 	}
 
-	vs, err := imagen.Normalizar(b)
+	// Los MISMOS pixeles para los dos formatos. Encodeando uno sobre la salida
+	// del otro se mediria la perdida de la segunda pasada y no el formato: es el
+	// error que tuvo la primera version de esto.
+	reducidas, err := imagen.Reducidas(b)
 	if err != nil {
 		return medida{}, err
 	}
 
-	m := medida{original: len(b), pequena: len(vs[imagen.Pequena])}
+	m := medida{original: len(b)}
 	nombre := sinExtension(filepath.Base(ruta))
 
 	for _, v := range imagen.Variantes {
-		m.webp += len(vs[v])
-
-		// Se re-encodea la MISMA variante ya reducida: asi la comparacion mide
-		// el formato y no el redimensionado.
-		enJPEG, err := comoJPEG(vs[v], calidadJPEG)
+		enWebP, err := imagen.EncodearWebP(reducidas[v], calidadWebP, metodo)
 		if err != nil {
 			return medida{}, err
 		}
+		enJPEG, err := comoJPEG(reducidas[v], calidadJPEG)
+		if err != nil {
+			return medida{}, err
+		}
+
+		m.webp += len(enWebP)
 		m.jpeg += len(enJPEG)
+		if v == imagen.Pequena {
+			m.pequena = len(enWebP)
+		}
 
 		if salida != "" {
 			base := filepath.Join(salida, nombre+string(v))
-			if err := os.WriteFile(base+".webp", vs[v], 0o644); err != nil {
+			if err := os.WriteFile(base+".webp", enWebP, 0o644); err != nil {
 				return medida{}, err
 			}
 			if err := os.WriteFile(base+".jpg", enJPEG, 0o644); err != nil {
@@ -124,11 +133,7 @@ func medir(ruta string, calidadJPEG int, salida string) (medida, error) {
 	return m, nil
 }
 
-func comoJPEG(variante []byte, calidad int) ([]byte, error) {
-	img, err := webp.Decode(bytes.NewReader(variante))
-	if err != nil {
-		return nil, err
-	}
+func comoJPEG(img image.Image, calidad int) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: calidad}); err != nil {
 		return nil, err

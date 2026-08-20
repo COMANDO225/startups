@@ -28,6 +28,7 @@ const estados: Record<EstadoImportacion, { texto: string; punto: string }> = {
 
 export function Lateral({
   nombre,
+  cargando,
   estado = "nueva",
   meta,
   secciones,
@@ -36,6 +37,10 @@ export function Lateral({
   onIr,
 }: {
   nombre: string;
+  /** La carta todavia no llego. El marco se pinta igual —el paso sale de la
+   *  URL— pero lo que depende de los datos se deja en hueco en vez de decir
+   *  algo que puede ser mentira. */
+  cargando?: boolean;
   estado?: EstadoImportacion;
   /** Lo que pasa a la derecha del titulo en el telefono: "74 platos", "en línea". */
   meta?: string;
@@ -55,9 +60,13 @@ export function Lateral({
           <p className="font-display text-[17px] font-bold leading-none tracking-[-0.03em] text-white">
             Tacu
           </p>
-          <p className="mt-1.5 truncate text-[12.5px] text-white/[0.68]">
-            {nombre}
-          </p>
+          {cargando ? (
+            <span className="mt-2 block h-3 w-28 rounded bg-white/10" />
+          ) : (
+            <p className="mt-1.5 truncate text-[12.5px] text-white/[0.68]">
+              {nombre}
+            </p>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-[14px] pb-[14px]">
@@ -70,10 +79,18 @@ export function Lateral({
         </div>
 
         <div className="flex items-center gap-[9px] border-t border-white/10 px-5 py-[14px]">
-          <span className={`size-[7px] shrink-0 rounded-full ${est.punto}`} />
-          <span className="truncate text-[11.5px] leading-[1.3] text-white/60">
-            {est.texto}
-          </span>
+          {cargando ? (
+            <span className="h-3 w-24 rounded bg-white/10" />
+          ) : (
+            <>
+              <span
+                className={`size-[7px] shrink-0 rounded-full ${est.punto}`}
+              />
+              <span className="truncate text-[11.5px] leading-[1.3] text-white/60">
+                {est.texto}
+              </span>
+            </>
+          )}
         </div>
       </aside>
 
@@ -85,12 +102,22 @@ export function Lateral({
           </span>
           <span className="size-[3px] shrink-0 rounded-full bg-white/[0.28]" />
           <span className="min-w-0 flex-1 truncate text-xs leading-[1.2] text-white/50">
-            {nombre}
+            {cargando ? (
+              <span className="block h-2.5 w-24 rounded bg-white/10" />
+            ) : (
+              nombre
+            )}
           </span>
-          <span className={`size-[7px] shrink-0 rounded-full ${est.punto}`} />
-          <span className="shrink-0 text-[10.5px] font-medium leading-none text-white/50">
-            {est.texto}
-          </span>
+          {!cargando && (
+            <>
+              <span
+                className={`size-[7px] shrink-0 rounded-full ${est.punto}`}
+              />
+              <span className="shrink-0 text-[10.5px] font-medium leading-none text-white/50">
+                {est.texto}
+              </span>
+            </>
+          )}
         </div>
 
         {/* La cinta: un tramo por seccion. Alto en vez de color para marcar

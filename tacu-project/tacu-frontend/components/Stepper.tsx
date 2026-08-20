@@ -29,17 +29,22 @@ export function Stepper({
   secciones,
   seccion,
   sub,
+  cargando,
   onIr,
 }: {
   secciones: Seccion[];
   seccion: string;
   sub: string;
+  /** Sin la carta no se sabe que esta bloqueado: se pinta el recorrido sin
+   *  candados en vez de inventarse cerraduras que a lo mejor no van. */
+  cargando?: boolean;
   onIr: (seccion: string, sub?: string) => void;
 }) {
   return (
     <nav aria-label="Pasos" className="flex flex-col gap-1">
       {secciones.map((s) => {
         const activa = s.id === seccion;
+        const bloqueada = !cargando && s.bloqueada;
         const abierta = activa && s.subs.length > 0;
         const iActivo = s.subs.findIndex((sb) => sb.id === sub);
         // El numero se convierte en un visto cuando ya esta hecha Y no estamos
@@ -99,7 +104,7 @@ export function Stepper({
             <button
               aria-current={activa ? "step" : undefined}
               className="relative z-2 flex w-full items-center gap-[11px] rounded-full px-[3px] text-start outline-offset-2 outline-accent focus-visible:outline-2 disabled:cursor-not-allowed"
-              disabled={s.bloqueada}
+              disabled={bloqueada}
               style={{ height: FILA }}
               type="button"
               onClick={() => onIr(s.id)}
@@ -116,7 +121,7 @@ export function Stepper({
                 }`}
                 style={{ width: CIRCULO, height: CIRCULO }}
               >
-                {s.bloqueada ? (
+                {bloqueada ? (
                   <Lock className="size-3" />
                 ) : hecha ? (
                   <Check className="size-3.5" />
@@ -190,7 +195,7 @@ export function Stepper({
                           >
                             {sb.label}
                           </span>
-                          {sb.tag && (
+                          {sb.tag && !cargando && (
                             <span
                               className={`shrink-0 rounded-full px-[7px] py-[4px] font-display text-[10.5px] font-medium leading-none ${
                                 sb.rojo

@@ -7,7 +7,7 @@ import {
   useRouter,
   useSelectedLayoutSegment,
 } from "next/navigation";
-import { CatalogoEsqueleto } from "@/components/CatalogoEsqueleto";
+import { EsqueletoDePaso } from "@/components/EsqueletoDePaso";
 import { Lateral } from "@/components/Lateral";
 import { Boton } from "@/components/ui/Boton";
 import { Ficha } from "@/components/ui/Ficha";
@@ -48,13 +48,6 @@ export default function MarcoDelEditor({
     router.replace(`/i/${id}/${alcance(importacion)}`);
   }, [error, id, importacion, isPending, paso, router]);
 
-  if (isPending)
-    return (
-      <Suelto>
-        <CatalogoEsqueleto />
-      </Suelto>
-    );
-
   if (error) {
     const fallo = error instanceof FalloApi ? error : null;
     const sinAcceso = fallo?.sinToken || fallo?.noEncontrada;
@@ -76,40 +69,39 @@ export default function MarcoDelEditor({
     );
   }
 
-  // Mientras el guard hace su trabajo no se pinta el paso equivocado.
-  if (!paso || !puedeIr(paso, importacion)) {
-    return (
-      <Suelto>
-        <CatalogoEsqueleto />
-      </Suelto>
-    );
-  }
+  // Mientras carga o mientras el guard redirige, el marco se queda y solo el
+  // contenido es un hueco. Antes desaparecia entero —rail, cabecera y todo— y
+  // volvia medio segundo despues: eso era el parpadeo.
+  const esperando = isPending || !paso || !puedeIr(paso, importacion);
 
   const lista = Object.values(fotos?.fotos ?? {});
   const secs = secciones({
-    importacion,
+    importacion: importacion ?? undefined,
     conFoto: lista.filter((f) => f.estado === "lista").length,
     platos: lista.length,
   });
-  const platos = importacion.categorias.flatMap((c) => c.platos);
-  const donde = DONDE[paso];
+  const platos = importacion?.categorias.flatMap((c) => c.platos) ?? [];
+  const donde = DONDE[paso ?? "datos"];
 
   return (
     <div className="flex min-h-svh flex-col lg:flex-row">
       <Lateral
-        estado={importacion.estado}
+        cargando={isPending}
+        estado={importacion?.estado ?? "nueva"}
         // Lo que va a la derecha del titulo en el telefono: el dato de la
         // seccion en la que estas, no un recuento global.
         meta={
-          donde.seccion === "restaurante"
-            ? `${importacion.paginas.length} ${importacion.paginas.length === 1 ? "hoja" : "hojas"}`
-            : donde.seccion === "carta"
-              ? `${platos.length} platos`
-              : importacion.estado === "publicada"
-                ? "en línea"
-                : undefined
+          !importacion
+            ? undefined
+            : donde.seccion === "restaurante"
+              ? `${importacion.paginas.length} ${importacion.paginas.length === 1 ? "hoja" : "hojas"}`
+              : donde.seccion === "carta"
+                ? `${platos.length} platos`
+                : importacion.estado === "publicada"
+                  ? "en línea"
+                  : undefined
         }
-        nombre={importacion.restaurante.nombre || "Tu restaurante"}
+        nombre={importacion?.restaurante.nombre || "Tu restaurante"}
         seccion={donde.seccion}
         secciones={secs}
         sub={donde.sub}
@@ -126,7 +118,7 @@ export default function MarcoDelEditor({
       />
 
       <main className="anima-panel min-w-0 flex-1 px-[14px] pt-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:max-w-[1080px] lg:px-8 lg:pt-[26px] lg:pb-10">
-        {children}
+        {esperando ? <EsqueletoDePaso paso={paso} /> : children}
       </main>
     </div>
   );

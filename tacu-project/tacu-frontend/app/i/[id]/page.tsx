@@ -205,7 +205,7 @@ function Revisar({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(214px,1fr))] lg:gap-3">
+      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(196px,1fr))] lg:gap-3">
         {marcados.map((plato) => (
           <TarjetaPlato
             key={plato.id}
@@ -282,7 +282,7 @@ function Catalogo({
               Estilo
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(214px,1fr))] lg:gap-3">
+          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(196px,1fr))] lg:gap-3">
             {categoria.platos
               .filter((plato) => !plato.ausente)
               .map((plato) => (

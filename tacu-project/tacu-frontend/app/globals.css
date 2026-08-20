@@ -31,7 +31,9 @@
      eso es texto invisible. La tinta es el unico color legible encima. */
   --accent-foreground: #14120f;
 
-  --danger: #b23227;
+  /* Un rojo de error de verdad. El del diseno (#B23227) es ladrillo: sobre la
+     crema tira a marron y deja de leerse como "esto esta mal". */
+  --danger: #d93025;
   --danger-foreground: #fff;
 
   /* Los inputs llevan borde mas oscuro que las tarjetas, y HeroUI trae
@@ -43,7 +45,7 @@
 @theme {
   /* Los dos niveles de aviso, para que nadie los mezcle por accidente:
      bloquea -> rojo; solo confirmar -> el amarillo oscuro del diseno. */
-  --color-bloquea: #b23227;
+  --color-bloquea: #d93025;
   --color-confirmar: #c9a227;
 
   /* Lo que el diseno usa y HeroUI no tiene nombre para ello. */
@@ -54,10 +56,12 @@
   --color-hueso: #f1efeb;
   --color-borde-campo: #dedbd4;
   --color-borde-suave: #e4e1da;
-  --color-rojo-claro: #d8544a;
-  --color-rojo-fondo: #fbedeb;
-  --color-rojo-borde: #e7c3be;
-  --color-rojo-texto: #96382e;
+  --color-rojo-claro: #e8695e;
+  --color-rojo-fondo: #fdecea;
+  --color-rojo-borde: #f5c6c1;
+  /* El texto dentro de la caja palida va mas oscuro que el rojo de marca: sobre
+     #FDECEA, el #D93025 se queda justo por debajo del contraste que hace falta. */
+  --color-rojo-texto: #a31d14;
 
   /* IBM Plex Sans para todo lo textual; Space Grotesk SOLO para cifras,
      titulos y etiquetas tecnicas. Es la regla de reparto del diseno. */

@@ -7,7 +7,7 @@
  */
 export function CatalogoEsqueleto() {
   return (
-    <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(214px,1fr))] lg:gap-3">
+    <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(196px,1fr))] lg:gap-3">
       {Array.from({ length: 8 }, (_, i) => (
         <div
           key={i}

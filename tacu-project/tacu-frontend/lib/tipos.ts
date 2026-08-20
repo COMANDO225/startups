@@ -12,7 +12,13 @@ export type OrigenFoto = "ia" | "propia";
 export type Foto = {
   estado: EstadoFoto;
   origen?: OrigenFoto;
+
+  /** La grande, 1280. Para el detalle y para volver a pasarla por el modelo. */
   url?: string;
+  /** 640, para las tarjetas del editor. */
+  url_media?: string;
+  /** 320, para el catalogo publico, que la pinta a 80 px. */
+  url_pequena?: string;
 };
 
 export type Precio = {

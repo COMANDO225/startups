@@ -4,6 +4,7 @@ package http
 import (
 	"tacu-backend/internal/kernel/id"
 	"tacu-backend/internal/modules/carta/domain"
+	"tacu-backend/internal/platform/imagen"
 )
 
 // Los DTO existen aparte del dominio a proposito. Si se serializara
@@ -152,7 +153,19 @@ type FotoDTO struct {
 	Origen string `json:"origen,omitempty"`
 
 	// URL vacia = todavia no hay foto, la tarjeta pinta el recuadro gris.
+	//
+	// Van las TRES y no solo la grande con una regla de sufijo en el frontend:
+	// como se llama cada variante lo sabe imagen.ConVariante y nadie mas. Con la
+	// regla repetida en TypeScript, el dia que cambie el sufijo el catalogo
+	// pediria claves que nadie escribio, y fallaria en silencio como una imagen
+	// rota.
 	URL string `json:"url,omitempty"`
+
+	// Media es para las tarjetas del editor (~200 px) y Pequena para el
+	// catalogo publico (80 px). Medido: la pequena pesa 8.9 KB donde la grande
+	// pesa 46, y la original que serviamos antes pesaba 594.
+	URLMedia   string `json:"url_media,omitempty"`
+	URLPequena string `json:"url_pequena,omitempty"`
 }
 
 type ErrorDTO struct {
@@ -164,6 +177,17 @@ type ErrorDTO struct {
 
 // URLDeClave la provee quien sirve las imagenes.
 type URLDeClave func(clave string) string
+
+func aFotoDTO(f domain.Foto, url URLDeClave) FotoDTO {
+	dto := FotoDTO{Estado: string(f.Estado), Origen: string(f.Origen)}
+	if f.Clave == "" {
+		return dto
+	}
+	dto.URL = url(f.Clave)
+	dto.URLMedia = url(imagen.ConVariante(f.Clave, imagen.Media))
+	dto.URLPequena = url(imagen.ConVariante(f.Clave, imagen.Pequena))
+	return dto
+}
 
 func aImportacionDTO(imp domain.Importacion, url URLDeClave, porFoto float64) ImportacionDTO {
 	dto := ImportacionDTO{
@@ -213,11 +237,7 @@ func aPlatoDTO(p domain.Plato, url URLDeClave) PlatoDTO {
 		FotoReferencias: urls(p.FotoReferencias, url),
 		Ausente:         p.Ausente,
 		Hoja:            p.Hoja,
-		Foto: FotoDTO{
-			Estado: string(p.Foto.Estado),
-			Origen: string(p.Foto.Origen),
-			URL:    url(p.Foto.Clave),
-		},
+		Foto:            aFotoDTO(p.Foto, url),
 	}
 
 	for _, pr := range p.Precios {

@@ -186,7 +186,7 @@ function RecuadroFoto({ foto, nombre }: { foto: Foto; nombre: string }) {
           <img
             alt={nombre}
             className="size-full object-cover"
-            src={urlMedia(foto.url)}
+            src={urlMedia(foto.url_media ?? foto.url)}
           />
           {foto.origen === "propia" && <Etiqueta>tuya</Etiqueta>}
         </div>

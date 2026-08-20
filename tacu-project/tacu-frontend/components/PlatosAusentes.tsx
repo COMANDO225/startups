@@ -75,7 +75,7 @@ export function PlatosAusentes({
                   <img
                     alt=""
                     className="size-full object-cover"
-                    src={urlMedia(plato.foto.url)}
+                    src={urlMedia(plato.foto.url_media ?? plato.foto.url)}
                   />
                 ) : (
                   <div className="grid size-full place-items-center text-muted">

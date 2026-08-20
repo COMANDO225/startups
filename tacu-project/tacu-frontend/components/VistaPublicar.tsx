@@ -56,7 +56,7 @@ export function VistaPublicar({ importacion }: { importacion: Importacion }) {
                       <img
                         alt={p.nombre}
                         className="size-12 shrink-0 rounded-lg object-cover"
-                        src={urlMedia(p.foto.url)}
+                        src={urlMedia(p.foto.url_pequena ?? p.foto.url)}
                       />
                     ) : (
                       <span className="size-12 shrink-0 rounded-lg bg-surface-secondary" />

@@ -138,11 +138,10 @@ func (h *Handler) estadoDeFotos(c fiber.Ctx) error {
 	}
 
 	for _, p := range imp.Carta.Platos() {
-		salida.Fotos[p.ID.String()] = FotoDTO{
-			Estado: string(p.Foto.Estado),
-			Origen: string(p.Foto.Origen),
-			URL:    h.url(p.Foto.Clave),
-		}
+		// Por aFotoDTO y no a mano: es el otro sitio que arma una foto, y
+		// escribiendola dos veces el editor se quedo sirviendo la grande de
+		// 1024 px en un hueco de 220 mientras el catalogo ya servia la pequena.
+		salida.Fotos[p.ID.String()] = aFotoDTO(p.Foto, h.url)
 		if p.Foto.Estado == domain.FotoPendiente || p.Foto.Estado == domain.FotoGenerando {
 			salida.Pendientes++
 		}

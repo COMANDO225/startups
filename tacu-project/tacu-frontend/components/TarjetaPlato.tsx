@@ -46,15 +46,24 @@ export function TarjetaPlato({
   // que mirar ahi, que es el precio contra la carta.
   const enFotos = modo === "fotos";
 
+  // Sin foto la tarjeta es solo texto, y el ritmo de 8 px que iba bien pegado a
+  // una imagen se lee apretado: la foto hacia de cabecera y todo lo de abajo
+  // era el cuerpo. Sola, la tarjeta tiene que separar cabecera —el nombre— de
+  // cuerpo —los precios— por si misma, asi que ese hueco se abre y el resto se
+  // queda como esta: el enlace pertenece al grupo de los precios.
+  const hueco = enFotos ? "mt-2" : "mt-3";
+
   return (
     <Ficha
       bloquea={plato.revisar?.bloquea}
-      className={`flex p-2.5 lg:p-[11px] ${
+      className={`flex ${
         enFotos
-          ? `gap-3 lg:flex-col lg:gap-0 ${
+          ? `gap-3 p-2.5 lg:flex-col lg:gap-0 lg:p-[11px] ${
               foto.estado === "lista" ? "anima-pop" : ""
             }`
-          : "flex-col"
+          : // 14 y no 11: los 11 estaban medidos contra una foto que sangra
+            // hasta el borde, y contra texto quedan cortos.
+            "flex-col p-3.5"
       }`}
       id={`plato-${plato.id}`}
     >
@@ -114,7 +123,7 @@ export function TarjetaPlato({
           </p>
         )}
 
-        <div className="mt-2 flex flex-col gap-[7px]">
+        <div className={`${hueco} flex flex-col gap-[7px]`}>
           {plato.precios.map((precio, i) => (
             <PrecioEditable key={i} precio={precio} />
           ))}
@@ -130,10 +139,12 @@ export function TarjetaPlato({
           </button>
         )}
 
-        {/* Se ensenia la explicacion del backend, nunca el codigo del motivo. */}
+        {/* Se ensenia la explicacion del backend, nunca el codigo del motivo.
+            Separado del resto: el motivo por el que este plato esta marcado no
+            es una linea mas de la ficha, es la razon de que estes mirandola. */}
         {plato.revisar && (
           <Aviso
-            className="mt-[11px]"
+            className={enFotos ? "mt-[11px]" : "mt-3.5"}
             tono={plato.revisar.bloquea ? "bloquea" : "confirmar"}
           >
             {plato.revisar.explicacion}

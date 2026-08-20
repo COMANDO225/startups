@@ -706,7 +706,7 @@ function LeerMiCarta({
         </h4>
         <p className="mt-1 text-sm text-muted">
           Las leemos otra vez y actualizamos los {platos} platos con lo que diga
-          tu papel: nombres, precios y secciones.
+          tu carta: nombres, precios y secciones.
           {conFoto > 0 && (
             <>
               {" "}

@@ -12,11 +12,11 @@ import { PrecioEditable } from "./PrecioEditable";
 import { SheetPlato } from "./SheetPlato";
 
 /**
- * modo decide QUE se puede hacer con la tarjeta, no como se ve.
+ * modo dice DE QUE sub-paso es la tarjeta, y con eso que lleva dentro.
  *
- * Es la misma tarjeta en las dos vistas —el catalogo se reconoce igual— pero en
- * Datos los botones de foto sobran y estorban, y en Fotos el aviso de un precio
- * sin nombre no se puede arreglar desde ahi.
+ * Es la misma tarjeta en las dos vistas —el catalogo se reconoce igual— pero la
+ * foto entera, caja y botones, es del sub-paso de fotos: en "Lo marcado" no hay
+ * nada que hacer con ella y lo que hay que mirar es el precio.
  */
 export function TarjetaPlato({
   idImportacion,
@@ -25,7 +25,7 @@ export function TarjetaPlato({
 }: {
   idImportacion: string;
   plato: Plato;
-  modo?: "datos" | "fotos";
+  modo?: "marcado" | "fotos";
 }) {
   const [editando, setEditando] = useState(false);
 
@@ -40,45 +40,74 @@ export function TarjetaPlato({
   const tieneAjuste =
     !!plato.foto_ajuste || (plato.foto_referencias?.length ?? 0) > 0;
 
+  // La foto es del sub-paso de fotos y de ningun otro. En "Lo marcado" no se
+  // puede hacer nada con ella —ni generarla ni subirla— y una caja de "Sin foto
+  // todavia" del alto de la tarjeta empuja fuera de la vista lo unico que hay
+  // que mirar ahi, que es el precio contra la carta.
+  const enFotos = modo === "fotos";
+
   return (
     <Ficha
       bloquea={plato.revisar?.bloquea}
-      className={`flex gap-3 p-2.5 lg:flex-col lg:gap-0 lg:p-[11px] ${
-        foto.estado === "lista" ? "anima-pop" : ""
+      className={`flex p-2.5 lg:p-[11px] ${
+        enFotos
+          ? `gap-3 lg:flex-col lg:gap-0 ${
+              foto.estado === "lista" ? "anima-pop" : ""
+            }`
+          : "flex-col"
       }`}
       id={`plato-${plato.id}`}
     >
       {/* En el telefono la tarjeta es una FILA con la foto de 94 px al lado: en
           columna, cuatro tarjetas llenan la pantalla y revisar 74 platos se
           vuelve un scroll infinito. */}
-      <div className="group relative size-[94px] shrink-0 lg:aspect-[4/3] lg:size-auto lg:w-full">
-        <RecuadroFoto foto={foto} nombre={plato.nombre} />
+      {enFotos && (
+        <div className="group relative size-[94px] shrink-0 lg:aspect-[4/3] lg:size-auto lg:w-full">
+          <RecuadroFoto foto={foto} nombre={plato.nombre} />
 
-        {/* Siempre visible aunque tenue: en movil no hay hover, y un control
-            que solo aparece al pasar el raton no existe para medio Peru. */}
-        <button
-          aria-label={`Editar ${plato.nombre}`}
-          className="absolute end-1.5 top-1.5 grid size-7 place-items-center rounded-[9px] bg-hueso/90 text-tinta opacity-90 transition-opacity group-hover:opacity-100 lg:size-8"
-          type="button"
-          onClick={() => setEditando(true)}
-        >
-          <Pencil className="size-3.5" />
-          {tieneAjuste && (
-            <span className="absolute -end-0.5 -top-0.5 size-2 rounded-full bg-confirmar" />
+          {/* Siempre visible aunque tenue: en movil no hay hover, y un control
+              que solo aparece al pasar el raton no existe para medio Peru. */}
+          <button
+            aria-label={`Editar ${plato.nombre}`}
+            className="absolute end-1.5 top-1.5 grid size-7 place-items-center rounded-[9px] bg-hueso/90 text-tinta opacity-90 transition-opacity group-hover:opacity-100 lg:size-8"
+            type="button"
+            onClick={() => setEditando(true)}
+          >
+            <Pencil className="size-3.5" />
+            {tieneAjuste && (
+              <span className="absolute -end-0.5 -top-0.5 size-2 rounded-full bg-confirmar" />
+            )}
+          </button>
+
+          {/* El punto de "precio corregido a mano": el nivel blando NO se pinta
+              como el que bloquea, y por eso es un punto y no un borde rojo. */}
+          {plato.revisar && !plato.revisar.bloquea && (
+            <span className="absolute end-1.5 bottom-1.5 size-[9px] rounded-full border-[1.5px] border-white bg-confirmar" />
           )}
-        </button>
+        </div>
+      )}
 
-        {/* El punto de "precio corregido a mano": el nivel blando NO se pinta
-            como el que bloquea, y por eso es un punto y no un borde rojo. */}
-        {plato.revisar && !plato.revisar.bloquea && (
-          <span className="absolute end-1.5 bottom-1.5 size-[9px] rounded-full border-[1.5px] border-white bg-confirmar" />
-        )}
-      </div>
+      <div
+        className={`flex min-w-0 flex-1 flex-col ${enFotos ? "lg:mt-[11px]" : ""}`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-[13.5px] font-medium leading-[1.35] text-pretty">
+            {plato.nombre}
+          </h3>
 
-      <div className="flex min-w-0 flex-1 flex-col lg:mt-[11px]">
-        <h3 className="text-[13.5px] font-medium leading-[1.35] text-pretty">
-          {plato.nombre}
-        </h3>
+          {/* Sin foto no hay donde colgar el lapiz: pasa a la cabecera, que es
+              donde queda a la misma altura que el nombre que va a editar. */}
+          {!enFotos && (
+            <button
+              aria-label={`Editar ${plato.nombre}`}
+              className="-mt-1 -me-1 grid size-7 shrink-0 place-items-center rounded-[9px] text-tenue transition-colors hover:bg-hueso hover:text-tinta"
+              type="button"
+              onClick={() => setEditando(true)}
+            >
+              <Pencil className="size-3.5" />
+            </button>
+          )}
+        </div>
         {plato.descripcion && (
           <p className="mt-1 text-xs leading-[1.4] text-tenue">
             {plato.descripcion}
@@ -111,7 +140,7 @@ export function TarjetaPlato({
           </Aviso>
         )}
 
-        {modo === "fotos" && (
+        {enFotos && (
           <div className="mt-[11px]">
             <BotonesDeFoto
               foto={foto}

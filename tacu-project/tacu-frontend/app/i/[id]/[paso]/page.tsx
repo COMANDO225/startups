@@ -135,7 +135,7 @@ export default function PasoDelEditor() {
 }
 
 /**
- * Revisar precios: SOLO lo marcado.
+ * Lo marcado: SOLO los platos que pidieron una mirada.
  *
  * Ensenar los 74 platos aqui obliga a buscar 3 entre 74. El trabajo de este
  * sub-paso es cerrar lo que no cuadra, y lo que ya cuadra no ayuda a hacerlo.
@@ -170,7 +170,7 @@ function Revisar({
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
-          Revisa contra tu papel
+          Revisa contra tu carta
         </h2>
         <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
           {bloquean > 0
@@ -184,7 +184,7 @@ function Revisar({
           <TarjetaPlato
             key={plato.id}
             idImportacion={idImportacion}
-            modo="datos"
+            modo="marcado"
             plato={plato}
           />
         ))}

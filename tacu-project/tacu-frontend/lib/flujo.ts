@@ -186,7 +186,12 @@ export function secciones({
       subs: [
         {
           id: "revisar",
-          label: "Revisar precios",
+          // "Lo marcado" y no "Revisar precios": el precio que no cuadra es el
+          // motivo mas comun, pero no el unico —los dos precios sin nombre, el
+          // plato que ya no aparece en la carta releida— y con el nombre viejo
+          // cada motivo nuevo dejaba mintiendo a la columna. Ademas es lo que
+          // la pantalla ensena literalmente: solo los platos marcados.
+          label: "Lo marcado",
           listo: bloquean === 0 && confirmar === 0,
           // El contador rojo es el que bloquea publicar; el gris solo pide una
           // mirada. Pintarlos igual entrena a aprobar sin leer.

@@ -35,6 +35,13 @@ func (a *almacenFalso) Guardar(_ context.Context, clave string, b []byte) error 
 	return nil
 }
 
+func (a *almacenFalso) Borrar(_ context.Context, clave string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	delete(a.guardado, clave)
+	return nil
+}
+
 func (a *almacenFalso) URL(clave string) string { return "/media/" + clave }
 
 type repoFalso struct {

@@ -142,6 +142,20 @@ func (d *Disco) Guardar(ctx context.Context, clave string, bytes []byte) error {
 
 // URL arma la direccion publica de una clave. Es la UNICA que sabe como se
 // construye, y por eso la base guarda claves y no URLs.
+// Borrar quita un objeto. Que no exista NO es error: se llama al reemplazar una
+// foto, y reintentar esa operacion no puede romperse porque una variante ya se
+// fuera en el intento anterior.
+func (d *Disco) Borrar(_ context.Context, clave string) error {
+	ruta, err := d.ruta(clave)
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(ruta); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("borrando %q: %w", clave, err)
+	}
+	return nil
+}
+
 func (d *Disco) URL(clave string) string {
 	if clave == "" {
 		return ""

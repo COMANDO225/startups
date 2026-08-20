@@ -21,6 +21,10 @@ type RepoFotos interface {
 	MarcarPendientes(ctx context.Context, importacionID id.ID, soloEstos []id.ID,
 		encolar func(context.Context, pgx.Tx, []id.ID) error) ([]id.ID, error)
 
+	// PlatoPorID hace falta para saber que archivo hay que borrar al reemplazar
+	// o quitar una foto: la clave vive en la fila del plato.
+	PlatoPorID(ctx context.Context, platoID id.ID) (domain.Plato, error)
+
 	MarcarFotoLista(ctx context.Context, platoID id.ID, origen domain.OrigenFoto, clave string) error
 	MarcarFotoConEstado(ctx context.Context, platoID id.ID, estado domain.EstadoFoto) error
 	ImportacionDePlato(ctx context.Context, platoID id.ID) (id.ID, error)
@@ -83,11 +87,23 @@ func (uc *Fotos) Generar(ctx context.Context, importacionID id.ID, soloEstos []i
 // Queda con origen 'propia', que es lo que hace que "generar todas" no la pise
 // nunca mas.
 func (uc *Fotos) SubirPropia(ctx context.Context, platoID id.ID, bytes []byte, mime string) error {
-	clave := fmt.Sprintf("fotos/%s/%s%s", platoID, id.Nuevo(), extensionDeImagen(mime))
-	if err := uc.almacen.Guardar(ctx, clave, bytes); err != nil {
+	plato, err := uc.repo.PlatoPorID(ctx, platoID)
+	if err != nil {
+		return err
+	}
+
+	clave, err := GuardarFoto(ctx, uc.almacen, fmt.Sprintf("fotos/%s/%s", platoID, id.Nuevo()), bytes)
+	if err != nil {
 		return fmt.Errorf("guardando la foto: %w", err)
 	}
-	return uc.repo.MarcarFotoLista(ctx, platoID, domain.FotoPropia, clave)
+	if err := uc.repo.MarcarFotoLista(ctx, platoID, domain.FotoPropia, clave); err != nil {
+		return err
+	}
+
+	// La anterior se va DESPUES de que la fila apunte a la nueva. Al reves, un
+	// fallo al escribir la fila dejaria al plato apuntando a un archivo que
+	// acabamos de borrar.
+	return BorrarFoto(ctx, uc.almacen, plato.Foto.Clave)
 }
 
 // maxAjuste topea lo que el dueno puede escribir para corregir una foto.
@@ -119,7 +135,14 @@ func (uc *Fotos) AjustarFoto(ctx context.Context, platoID id.ID, ajuste string) 
 // abre la puerta a que un fallo a mitad deje la fila apuntando a un archivo que
 // ya no esta. Un barrido de huerfanos es un trabajo aparte, sin prisa.
 func (uc *Fotos) Quitar(ctx context.Context, platoID id.ID) error {
-	return uc.repo.MarcarFotoConEstado(ctx, platoID, domain.SinFoto)
+	plato, err := uc.repo.PlatoPorID(ctx, platoID)
+	if err != nil {
+		return err
+	}
+	if err := uc.repo.MarcarFotoConEstado(ctx, platoID, domain.SinFoto); err != nil {
+		return err
+	}
+	return BorrarFoto(ctx, uc.almacen, plato.Foto.Clave)
 }
 
 func extensionDeImagen(mime string) string {

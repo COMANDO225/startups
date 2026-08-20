@@ -24,6 +24,12 @@ import (
 // de importar no necesita escribir en disco para probar que la carta se guarda.
 type Almacen interface {
 	Guardar(ctx context.Context, clave string, bytes []byte) error
+
+	// Borrar no puede fallar porque la clave no exista: se llama al reemplazar
+	// una foto, y reintentar esa operacion no puede romperse por una variante
+	// que ya se fue.
+	Borrar(ctx context.Context, clave string) error
+
 	URL(clave string) string
 }
 

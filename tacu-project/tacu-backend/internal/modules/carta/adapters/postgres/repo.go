@@ -957,6 +957,18 @@ func (r *Repo) PlatoPorID(ctx context.Context, platoID id.ID) (domain.Plato, err
 		Revisar:         domain.MotivoRevision(f.Revisar),
 		FotoAjuste:      f.FotoAjuste,
 		FotoReferencias: claves(f.FotoReferencias),
+
+		// La foto va entera y no solo su ajuste: de la CLAVE cuelga el borrado
+		// del archivo al reemplazarla o quitarla. Cuando esto no estaba, la
+		// clave llegaba vacia, el borrado salia sin hacer nada y cada foto
+		// reemplazada quedaba en el almacen para siempre, sin un solo error en
+		// ningun log.
+		Foto: domain.Foto{
+			Estado:   domain.EstadoFoto(f.FotoEstado),
+			Origen:   domain.OrigenFoto(f.FotoOrigen),
+			Clave:    f.FotoClave,
+			Intentos: int(f.FotoIntentos),
+		},
 	}, nil
 }
 

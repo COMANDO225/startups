@@ -329,3 +329,44 @@ func TestGenerarTodasNoPisaLasFotosPropias(t *testing.T) {
 		}
 	}
 }
+
+// PlatoPorID tiene que traer la CLAVE de la foto, no solo el nombre y el precio.
+//
+// De ella cuelga el borrado: quien reemplaza o quita una foto la usa para llevarse
+// el archivo. Cuando el mapeo no rellenaba Foto, la clave llegaba vacia, el
+// borrado salia sin hacer nada y cada foto reemplazada quedaba en el almacen para
+// siempre — sin un solo error en ningun log, que es lo que lo hizo invisible.
+func TestPlatoPorIDTraeLaClaveDeLaFoto(t *testing.T) {
+	r, _ := repo(t)
+	ctx := context.Background()
+	impID := borrador(t, r)
+
+	if err := r.GuardarCarta(ctx, impID, domain.Carta{Categorias: []domain.Categoria{{
+		Nombre: "Fondos",
+		Platos: []domain.Plato{{
+			Nombre:  "Lomo saltado",
+			Precios: []domain.Precio{{Texto: "S/ 30", Centimos: 3000}},
+		}},
+	}}}, nil, domain.Marcas{}); err != nil {
+		t.Fatal(err)
+	}
+
+	imp, _ := r.Obtener(ctx, impID)
+	platoID := imp.Carta.Platos()[0].ID
+
+	const clave = "fotos/abc/def.webp"
+	if err := r.MarcarFotoLista(ctx, platoID, domain.FotoPropia, clave); err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := r.PlatoPorID(ctx, platoID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Foto.Clave != clave {
+		t.Fatalf("Foto.Clave = %q, quiere %q: sin ella el borrado no encuentra el archivo", p.Foto.Clave, clave)
+	}
+	if p.Foto.Origen != domain.FotoPropia {
+		t.Fatalf("Foto.Origen = %q, quiere %q", p.Foto.Origen, domain.FotoPropia)
+	}
+}

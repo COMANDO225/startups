@@ -93,6 +93,7 @@ type RepoFoto interface {
 // AlmacenFoto guarda la imagen generada.
 type AlmacenFoto interface {
 	Guardar(ctx context.Context, clave string, bytes []byte) error
+	Borrar(ctx context.Context, clave string) error
 }
 
 // Generador pide la imagen a la IA.
@@ -183,8 +184,9 @@ func (w *GenerarFoto) Work(ctx context.Context, job *river.Job[GenerarFotoArgs])
 	// idempotencia para imagenes, asi que no se puede cerrar: solo achicar. Son
 	// ~200 ms sobre 4.2 s y $0.0336, y foto_intentos < 2 garantiza que no se
 	// repita mas de una vez.
-	clave := fmt.Sprintf("fotos/%s/%s%s", platoID, id.Nuevo(), extensionDe(img.MIME))
-	if err := w.almacen.Guardar(ctx, clave, img.Bytes); err != nil {
+	clave, err := app.GuardarFoto(ctx, w.almacen,
+		fmt.Sprintf("fotos/%s/%s", platoID, id.Nuevo()), img.Bytes)
+	if err != nil {
 		w.fallo(ctx, platoID, err)
 		return fmt.Errorf("guardando la foto de %q: %w", encargo.Plato.Nombre, err)
 	}
@@ -192,6 +194,13 @@ func (w *GenerarFoto) Work(ctx context.Context, job *river.Job[GenerarFotoArgs])
 	// 5. Recien ahora la tarjeta se llena en la pantalla.
 	if err := w.repo.MarcarFotoLista(ctx, platoID, domain.FotoDeIA, clave); err != nil {
 		return fmt.Errorf("marcando la foto lista: %w", err)
+	}
+
+	// La anterior se va DESPUES de que la fila apunte a la nueva: regenerar
+	// escribe siempre una clave nueva —por la cache del navegador— asi que sin
+	// esto cada correccion deja la version vieja en el bucket para siempre.
+	if err := app.BorrarFoto(ctx, w.almacen, encargo.Plato.Foto.Clave); err != nil {
+		w.log.WarnContext(ctx, "no se pudo borrar la foto anterior", "error", err)
 	}
 
 	w.log.Info("foto generada",

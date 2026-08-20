@@ -218,16 +218,6 @@ func (w *GenerarFoto) fallo(ctx context.Context, platoID id.ID, causa error) {
 	}
 }
 
-func extensionDe(mime string) string {
-	switch mime {
-	case "image/png":
-		return ".png"
-	case "image/webp":
-		return ".webp"
-	}
-	return ".jpg"
-}
-
 // GeneradorIA pide la foto a la capa de IA usando el prompt del modulo.
 type GeneradorIA struct {
 	ia  *ai.Cliente

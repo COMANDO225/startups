@@ -57,7 +57,7 @@ func GuardarHoja(ctx context.Context, alm AlmacenDeImagenes, clave string, bytes
 		// Una hoja que no se puede reducir sigue sirviendo: la lectura usa la
 		// original, y el mosaico se aguanta con ella. No es motivo para
 		// rechazar la subida —una carta en PDF entra por aqui y no se decodifica.
-		return nil
+		return nil //nolint:nilerr // tragarse este error es la decision, no un olvido.
 	}
 	return alm.Guardar(ctx, MiniaturaDeHoja(clave), vs[imagen.Pequena])
 }

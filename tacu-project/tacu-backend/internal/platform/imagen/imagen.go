@@ -105,7 +105,7 @@ func Normalizar(origen []byte) (map[Variante][]byte, error) {
 func Reducidas(origen []byte) (map[Variante]image.Image, error) {
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(origen))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrNoEsImagen, err)
+		return nil, fmt.Errorf("%w: %w", ErrNoEsImagen, err)
 	}
 	if cfg.Width*cfg.Height > maxPixeles {
 		return nil, fmt.Errorf("%w: %dx%d", ErrDemasiadoGrande, cfg.Width, cfg.Height)
@@ -113,7 +113,7 @@ func Reducidas(origen []byte) (map[Variante]image.Image, error) {
 
 	src, err := decodificar(origen)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrNoEsImagen, err)
+		return nil, fmt.Errorf("%w: %w", ErrNoEsImagen, err)
 	}
 	src = Enderezar(src, OrientacionDe(origen))
 

@@ -109,9 +109,13 @@ export function useAvanceDeFotos(id: string | undefined) {
  * desharia la hidratacion.
  */
 export function useMisRestaurantes() {
+  // La MISMA funcion para las dos instantaneas: misRestaurantes ya devuelve la
+  // constante vacia cuando no hay window, y esa es justo la parte que tiene que
+  // ser estable. Un `() => []` como tercer argumento crea un array nuevo en cada
+  // llamada, React lo compara por identidad, y eso es un bucle infinito.
   return useSyncExternalStore(
     escucharRestaurantes,
     misRestaurantes,
-    () => [] as ReturnType<typeof misRestaurantes>,
+    misRestaurantes,
   );
 }

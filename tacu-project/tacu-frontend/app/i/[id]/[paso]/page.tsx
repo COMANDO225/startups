@@ -53,6 +53,7 @@ export default function PasoDelEditor() {
           conFoto={conFoto}
           importacion={importacion}
           onReintentar={() => router.push("/")}
+          onSeguir={() => router.push(`/i/${id}/revisar`)}
         />
       )}
 

@@ -28,6 +28,7 @@ import {
 } from "@/lib/api";
 import type { Importacion, Pagina, Plato } from "@/lib/tipos";
 import { PanelDeLectura } from "./PanelDeLectura";
+import { BarraAccion } from "./BarraAccion";
 import { SubirHojas } from "./SubirHojas";
 import { Aviso } from "./ui/Aviso";
 import { Boton } from "./ui/Boton";
@@ -48,11 +49,15 @@ export function VistaCarta({
   importacion,
   conFoto,
   onReintentar,
+  onSeguir,
 }: {
   importacion: Importacion;
   /** Fotos ya generadas. Una relectura se las lleva por delante. */
   conFoto: number;
   onReintentar: () => void;
+  /** Al paso siguiente. Solo cuando la carta ya esta leida: mientras se editan
+   *  las hojas, la unica accion es leerlas. */
+  onSeguir: () => void;
 }) {
   // Fallida: en rojo, con las hojas que fallaron delante y CON QUE HACER. Un
   // aviso que solo dice "no pudimos" deja al dueno repitiendo la misma foto
@@ -215,6 +220,20 @@ export function VistaCarta({
       ) : (
         <div className="flex flex-col gap-3">
           <Resumen categorias={importacion.categorias.length} platos={platos} />
+
+          {/* La salida del paso. Era el unico que no tenia ninguna: la pantalla
+              se acababa en el resumen y no decia a donde ir. */}
+          <div className="mt-3 hidden lg:block">
+            <Boton tamano="md" variante="tinta" onClick={onSeguir}>
+              Seguir a tu catálogo →
+            </Boton>
+          </div>
+
+          <BarraAccion
+            etiqueta="Seguir a tu catálogo"
+            variante="tinta"
+            onClick={onSeguir}
+          />
         </div>
       )}
     </div>

@@ -56,10 +56,11 @@ export function Stepper({
                 <motion.span
                   animate={{ opacity: 1 }}
                   aria-hidden
-                  className="absolute start-[3px] top-1 z-1 rounded-full bg-white/[0.07]"
+                  className="absolute start-[3px] z-1 rounded-full bg-white/[0.07]"
                   exit={{ opacity: 0 }}
                   initial={{ opacity: 0 }}
                   style={{
+                    top: MARGEN,
                     width: CIRCULO,
                     height: largoCapsula(s.subs.length - 1),
                   }}
@@ -75,11 +76,11 @@ export function Stepper({
                   abierta && iActivo >= 0 ? largoCapsula(iActivo) : CIRCULO,
               }}
               aria-hidden
-              className={`absolute start-[3px] top-1 z-1 rounded-full ${
+              className={`absolute start-[3px] z-1 rounded-full ${
                 activa ? "bg-accent" : s.listo ? "bg-accent/25" : "bg-white/10"
               }`}
               initial={false}
-              style={{ width: CIRCULO }}
+              style={{ top: MARGEN, width: CIRCULO }}
               transition={{ duration: 0.42, ease: [0.34, 1.2, 0.4, 1] }}
             />
 

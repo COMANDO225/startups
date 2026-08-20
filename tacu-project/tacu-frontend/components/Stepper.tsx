@@ -18,8 +18,8 @@ import type { Seccion } from "@/lib/flujo";
  * el circulo cae a (FILA-CIRCULO)/2 del borde. De ahi salen el alto de la
  * capsula y el del carril; cambiar una obliga a recalcular las otras.
  */
-const FILA = 34;
-const CIRCULO = 26;
+const FILA = 38;
+const CIRCULO = 30;
 const MARGEN = (FILA - CIRCULO) / 2;
 
 /** Hasta donde llega la capsula con el sub-paso `i` activo. */
@@ -56,7 +56,7 @@ export function Stepper({
                 <motion.span
                   animate={{ opacity: 1 }}
                   aria-hidden
-                  className="absolute start-[3px] top-1 rounded-full bg-white/[0.07]"
+                  className="absolute start-[3px] top-1 z-1 rounded-full bg-white/[0.07]"
                   exit={{ opacity: 0 }}
                   initial={{ opacity: 0 }}
                   style={{
@@ -75,7 +75,7 @@ export function Stepper({
                   abierta && iActivo >= 0 ? largoCapsula(iActivo) : CIRCULO,
               }}
               aria-hidden
-              className={`absolute start-[3px] top-1 rounded-full ${
+              className={`absolute start-[3px] top-1 z-1 rounded-full ${
                 activa ? "bg-accent" : s.listo ? "bg-accent/25" : "bg-white/10"
               }`}
               initial={false}
@@ -83,18 +83,28 @@ export function Stepper({
               transition={{ duration: 0.42, ease: [0.34, 1.2, 0.4, 1] }}
             />
 
+            {/* El resalte de la fila activa, en su PROPIA capa y debajo de la
+                capsula. Puesto como fondo del boton se pintaba encima y le
+                lavaba el amarillo: el circulo y la capsula tienen que verse en
+                su color solido, sin nada translucido por encima. */}
+            {activa && (
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 rounded-full bg-white/10"
+                style={{ height: FILA }}
+              />
+            )}
+
             <button
               aria-current={activa ? "step" : undefined}
-              className={`relative flex w-full items-center gap-[11px] rounded-full px-[3px] text-start outline-offset-2 outline-accent transition-colors focus-visible:outline-2 disabled:cursor-not-allowed ${
-                activa ? "bg-white/10" : ""
-              }`}
+              className="relative z-2 flex w-full items-center gap-[11px] rounded-full px-[3px] text-start outline-offset-2 outline-accent focus-visible:outline-2 disabled:cursor-not-allowed"
               disabled={s.bloqueada}
               style={{ height: FILA }}
               type="button"
               onClick={() => onIr(s.id)}
             >
               <span
-                className={`grid shrink-0 place-items-center rounded-full font-display text-[12.5px] font-semibold transition-colors duration-300 ${
+                className={`grid shrink-0 place-items-center rounded-full font-display text-[13px] font-semibold transition-colors duration-300 ${
                   activa
                     ? "text-tinta"
                     : s.listo
@@ -144,7 +154,7 @@ export function Stepper({
                     return (
                       <li key={sb.id}>
                         <button
-                          className="relative flex w-full items-center gap-[11px] ps-[3px] text-start outline-offset-2 outline-accent focus-visible:outline-2"
+                          className="relative z-2 flex w-full items-center gap-[11px] ps-[3px] text-start outline-offset-2 outline-accent focus-visible:outline-2"
                           style={{ height: FILA }}
                           type="button"
                           onClick={() => onIr(s.id, sb.id)}
@@ -167,8 +177,8 @@ export function Stepper({
                               }`}
                               style={
                                 aqui
-                                  ? { width: 8, height: 8 }
-                                  : { width: 6, height: 6 }
+                                  ? { width: 9, height: 9 }
+                                  : { width: 7, height: 7 }
                               }
                             />
                           </span>

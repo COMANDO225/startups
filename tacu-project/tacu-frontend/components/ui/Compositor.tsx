@@ -67,7 +67,7 @@ export function Compositor({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="rounded-2xl border border-borde-campo bg-surface focus-within:border-tinta">
+      <div className="rounded-2xl border border-borde-campo bg-surface focus-within:border-tinta focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-tinta">
         {adjuntos.length > 0 && (
           <div className="flex flex-wrap gap-2 p-2.5 pb-0">
             {adjuntos.map((a) => (
@@ -102,6 +102,7 @@ export function Compositor({
 
         <textarea
           ref={caja}
+          data-foco-propio
           className="block w-full resize-none bg-transparent px-3.5 pt-3 pb-1.5 text-[15px] leading-[1.45] outline-none placeholder:text-apagado"
           maxLength={maximo}
           placeholder={placeholder}

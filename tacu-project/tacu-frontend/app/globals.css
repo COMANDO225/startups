@@ -84,10 +84,19 @@ textarea {
   font-size: max(1rem, 16px);
 }
 
-/* El foco del diseno es un recuadro duro, sin radio: se ve sobre cualquier
-   fondo, incluido el rail oscuro. */
-input:focus-visible,
-textarea:focus-visible {
+/* El foco se ve sobre cualquier fondo, incluido el rail oscuro, y `outline` ya
+   sigue el border-radius del propio campo.
+
+   SIN @layer a proposito: el CSS sin capa le gana a `@layer utilities` sin mirar
+   la especificidad, y eso es lo que hace que este foco sobreviva a las
+   utilidades de HeroUI. Metido en una capa, los inputs se quedaban sin foco
+   ninguno.
+   
+   Por eso la salida es explicita y vive aqui: un campo SIN radio dentro de una
+   caja redondeada dibuja un rectangulo duro dentro de las esquinas, asi que
+   marca data-foco-propio y el indicador lo pone su contenedor. */
+input:not([data-foco-propio]):focus-visible,
+textarea:not([data-foco-propio]):focus-visible {
   outline: 2px solid var(--foreground);
   outline-offset: -1px;
 }

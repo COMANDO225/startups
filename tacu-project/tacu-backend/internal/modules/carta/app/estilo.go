@@ -17,6 +17,12 @@ var ErrSinPresupuesto = errors.New("esta carta ya gasto su presupuesto")
 // ErrRanuraDesconocida protege el unico enum que entra por la URL.
 var ErrRanuraDesconocida = errors.New("esa ranura no existe")
 
+var ErrTextoLargo = errors.New("la descripcion es demasiado larga")
+
+// El mismo tope que maxAjuste y por la misma razon: el texto del dueno se suma a
+// una plantilla que ya trae recipiente, escala, camara, luz y encuadre.
+const maxTextoDeRanura = 500
+
 // Las dos ranuras, y no hay mas. Viajan por la URL, asi que se validan al
 // entrar: sin esto, ?ranura=cualquiera escribiria en la vajilla por ser el
 // primer caso del switch.
@@ -93,6 +99,13 @@ func (uc *EstiloUC) Leer(ctx context.Context, impID id.ID, categoria string) (do
 // diciendole que es la que acaba de escribir. La foto no se toca: es la otra
 // via, y quitarla es un acto aparte.
 func (uc *EstiloUC) GuardarTextos(ctx context.Context, impID id.ID, categoria, vajilla, fondo string) error {
+	for _, t := range []string{vajilla, fondo} {
+		if len(t) > maxTextoDeRanura {
+			return fmt.Errorf("%w: %d caracteres, el maximo es %d",
+				ErrTextoLargo, len(t), maxTextoDeRanura)
+		}
+	}
+
 	propio, err := uc.repo.EstiloPropio(ctx, impID, categoria)
 	if err != nil {
 		return err

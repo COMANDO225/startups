@@ -480,6 +480,8 @@ func traducirError(c fiber.Ctx, err error) error {
 		errors.Is(err, app.ErrDemasiadas),
 		errors.Is(err, app.ErrImagenInvalida),
 		errors.Is(err, app.ErrAjusteLargo),
+		errors.Is(err, app.ErrTextoLargo),
+		errors.Is(err, app.ErrRanuraDesconocida),
 		errors.Is(err, app.ErrEtiquetaLarga),
 		errors.Is(err, app.ErrPaginaDesconocida):
 		return problema(c, http.StatusBadRequest, err.Error(), "")

@@ -1,9 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Description, Input, Label, TextField } from "@heroui/react";
-import { Camera } from "lucide-react";
 import { Panel } from "@/components/Panel";
 import {
   dibujarRanura,
@@ -15,23 +13,32 @@ import {
 } from "@/lib/api";
 import type { CualRanura, Estilo, Ranura } from "@/lib/tipos";
 import { Boton } from "./ui/Boton";
+import { Compositor } from "./ui/Compositor";
 import { Girador } from "./ui/Girador";
 
 const TIPOS = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 10 * 1024 * 1024;
 
+// El mismo tope que el ajuste de un plato, y por lo mismo: el texto del dueno se
+// suma a una plantilla que ya trae camara, luz y encuadre, y uno largo compite
+// con todo eso.
+const MAX_TEXTO = 500;
+
+// Una sola. La foto de la ranura viaja en TODAS las generaciones de la carta,
+// asi que cada imagen de mas se paga 74 veces, y un segundo angulo de un plato
+// vacio no dice nada nuevo.
+const MAX_FOTOS = 1;
+
 const RANURAS = {
   vajilla: {
     titulo: "Tu vajilla",
-    ejemplo: "Ej: plato de barro, bandeja de madera, bol hondo negro.",
+    ejemplo: "Ej: plato hondo de barro, bandeja de madera, bol negro mate.",
     siempre: "Plato redondo blanco",
-    subir: "Subir una foto de tu plato",
   },
   fondo: {
     titulo: "Tu fondo",
-    ejemplo: "Ej: mesa de madera, mantel de colores, en la playa.",
+    ejemplo: "Ej: mesa de madera oscura, mantel de colores, sobre la arena.",
     siempre: "Blanco de catálogo",
-    subir: "Subir una foto de tu mesa",
   },
 } as const;
 
@@ -51,7 +58,6 @@ export function SheetEstilo({
   const [cual, setCual] = useState<CualRanura | null>(null);
   const [texto, setTexto] = useState("");
   const [aviso, setAviso] = useState<string | null>(null);
-  const entrada = useRef<HTMLInputElement>(null);
 
   const clave = ["estilo", idImportacion, categoria];
   const { data: estilo } = useQuery({
@@ -110,8 +116,7 @@ export function SheetEstilo({
     setCual(r);
   }
 
-  function elegir(foto: File | undefined) {
-    if (!foto) return;
+  function elegir(foto: File) {
     if (!TIPOS.includes(foto.type)) {
       setAviso(`"${foto.name}" no es una foto.`);
       return;
@@ -188,50 +193,26 @@ export function SheetEstilo({
         </div>
       ) : (
         <>
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex justify-center">
             <Vista grande cual={cual} ranura={estilo[cual]} />
-
-            <Boton
-              ancho
-              disabled={ocupado}
-              variante="blanco"
-              onClick={() => entrada.current?.click()}
-            >
-              <Camera className="size-[17px]" />
-              {subir.isPending ? "Subiendo…" : RANURAS[cual].subir}
-            </Boton>
-            <input
-              ref={entrada}
-              accept={TIPOS.join(",")}
-              className="sr-only"
-              type="file"
-              onChange={(e) => {
-                elegir(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
           </div>
 
           <div className="mt-5">
-            <TextField value={texto} onChange={setTexto}>
-              <Label>o descríbelo</Label>
-              <Input maxLength={200} placeholder={RANURAS[cual].siempre} />
-              <Description>{RANURAS[cual].ejemplo}</Description>
-            </TextField>
-
-            <div className="mt-3 flex items-center gap-2.5">
-              <Boton
-                disabled={ocupado || texto.trim() === ""}
-                tamano="sm"
-                variante="blanco"
-                onClick={() => dibujar.mutate()}
-              >
-                {dibujar.isPending ? "Dibujando…" : "Dibujarlo"}
-              </Boton>
-              <span className="text-xs text-tenue">
-                Gasta una foto de tu carta.
-              </span>
-            </div>
+            <Compositor
+              adjuntando={subir.isPending}
+              ayuda={`${RANURAS[cual].ejemplo} Dibujarlo gasta una foto de tu carta.`}
+              deshabilitado={ocupado}
+              enviando={dibujar.isPending}
+              etiquetaEnviar="Dibujarlo"
+              maxAdjuntos={MAX_FOTOS}
+              maximo={MAX_TEXTO}
+              placeholder={`Describe ${RANURAS[cual].titulo.toLowerCase()}. Si subes una foto, nos guiamos de ella.`}
+              tiposAdjunto={TIPOS}
+              valor={texto}
+              onAdjuntar={elegir}
+              onCambio={setTexto}
+              onEnviar={() => dibujar.mutate()}
+            />
           </div>
 
           {aviso && <p className="mt-3 text-sm text-bloquea">{aviso}</p>}

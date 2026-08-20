@@ -73,9 +73,16 @@ func correr(rutaConfig string, log *slog.Logger) error {
 	errores := make(chan error, 1)
 	go func() {
 		dir := fmt.Sprintf(":%d", cfg.Servidor.Puerto)
+		// El tipo y no la raiz: con r2 la raiz no se usa, y ver "./datos/media"
+		// en el arranque de un servidor que escribe en un bucket es la clase de
+		// linea que hace perder media hora buscando en el sitio equivocado.
+		almacen := cfg.Almacen.Tipo
+		if almacen == "" {
+			almacen = "disco"
+		}
 		log.Info("escuchando", "puerto", cfg.Servidor.Puerto,
 			"lectura_sincrona", cfg.Servidor.LeerCartaSincrono,
-			"almacen", cfg.Almacen.Raiz)
+			"almacen", almacen)
 		errores <- app.Fiber.Listen(dir)
 	}()
 

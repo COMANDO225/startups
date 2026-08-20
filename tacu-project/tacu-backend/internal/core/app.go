@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"mime"
-	"path/filepath"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -138,7 +136,7 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 
 	repo := postgres.NuevoRepo(pool)
 
-	alm, err := almacen.NuevoDisco(cfg.Almacen.Raiz, cfg.Almacen.Base)
+	alm, err := armarAlmacen(ctx, cfg.Almacen, log)
 	if err != nil {
 		pool.Close()
 		return nil, err
@@ -244,8 +242,18 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	v1 := f.Group("/v1")
 	handler.Montar(v1)
 
-	// Las imagenes se sirven desde el mismo binario. Un CDN es una linea de
-	// nginx el dia que haga falta, y hasta entonces esto no tiene contras.
+	// Las imagenes se sirven desde el mismo binario.
+	//
+	// ESTA RUTA NO COMPRUEBA NADA, y con las privadas si tiene contras: la hoja
+	// de carta de un restaurante la abre cualquiera que conozca su clave. Que la
+	// clave sea un uuidv7 lo hace improbable, no imposible, y "improbable de
+	// adivinar" no es un control de acceso.
+	//
+	// No se arregla con el token en la cabecera: un <img src> del navegador no
+	// manda cabeceras. Lo que toca es firmar la URL de lo privado —un HMAC con
+	// caducidad en la query, que URL() anade y esto verifica—, y para eso el
+	// prefijo r/{restaurante}/ que ya llevan las claves da a quien pertenece
+	// cada objeto.
 	f.Get(cfg.Almacen.Base+"/*", servirMedia(alm))
 
 	// nolint:contextcheck // El linter quiere que este closure propague el ctx de
@@ -333,37 +341,75 @@ func registrarPeticion(log *slog.Logger) fiber.Handler {
 // raiz: se abre a traves de almacen.Abrir, que usa os.Root y no puede salirse.
 // La primera version hacia c.SendFile(raiz + "/" + c.Params("*")) y
 // GET /media/../secreto.txt devolvia el archivo.
-func servirMedia(alm *almacen.Disco) fiber.Handler {
-	noExiste := func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "no existe"})
+// Almacen es lo que la aplicacion necesita del almacenamiento de imagenes. La
+// declara quien la consume, como el resto: ni el disco ni R2 exportan interfaz.
+type Almacen interface {
+	Guardar(ctx context.Context, clave string, bytes []byte) error
+	Leer(ctx context.Context, clave string) ([]byte, string, error)
+	Borrar(ctx context.Context, clave string) error
+	URL(clave string) string
+}
+
+// armarAlmacen elige disco o bucket, y con el bucket COMPRUEBA que responde.
+//
+// Comprobar al arrancar y no a la primera foto: unas credenciales mal puestas se
+// descubririan cuando un dueno pulsa "generar", despues de haberle cobrado
+// $0.0336 por un error de configuracion nuestro. Aqui, el servidor no levanta y
+// dice por que.
+func armarAlmacen(ctx context.Context, cfg config.Almacen, log *slog.Logger) (Almacen, error) {
+	if !cfg.UsaR2() {
+		return almacen.NuevoDisco(cfg.Raiz, cfg.Base)
 	}
 
+	r2, err := almacen.NuevoR2(cfg.R2.Cuenta, cfg.R2.ClaveID, cfg.R2.Secreto,
+		cfg.R2.BucketPublico, cfg.R2.BucketPrivado, cfg.R2.DominioPublico, cfg.Base, log)
+	if err != nil {
+		return nil, err
+	}
+
+	prueba, cancelar := context.WithTimeout(ctx, 15*time.Second)
+	defer cancelar()
+	if err := r2.Comprobar(prueba); err != nil {
+		return nil, fmt.Errorf("no se pudo hablar con R2: %w", err)
+	}
+
+	log.Info("almacen en R2",
+		"publico", cfg.R2.BucketPublico, "privado", cfg.R2.BucketPrivado,
+		"dominio", cfg.R2.DominioPublico)
+	return r2, nil
+}
+
+// LectorDeImagenes es lo unico que servirMedia necesita: entregar bytes por
+// clave. Una interfaz y no *almacen.Disco porque las privadas —las hojas de la
+// carta, el estilo— salen por aqui tambien cuando viven en un bucket.
+type LectorDeImagenes interface {
+	Leer(ctx context.Context, clave string) ([]byte, string, error)
+}
+
+func servirMedia(alm LectorDeImagenes) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		f, err := alm.Abrir(c.Params("*"))
+		clave := c.Params("*")
+
+		// La ruta viene de la URL, o sea del usuario. NO se concatena con
+		// ninguna raiz: quien lee sabe confinar —el disco con os.Root, el bucket
+		// porque una clave no es una ruta—. La primera version hacia
+		// SendFile(raiz + "/" + loQueVenga) y GET /media/../secreto.txt
+		// devolvia el archivo.
+		datos, tipo, err := alm.Leer(c.Context(), clave)
 		if err != nil {
-			return noExiste(c)
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "no existe"})
 		}
 
-		info, err := f.Stat()
-		if err != nil || info.IsDir() {
-			_ = f.Close()
-			return noExiste(c)
-		}
-
-		if tipo := mime.TypeByExtension(filepath.Ext(c.Params("*"))); tipo != "" {
+		if tipo != "" {
 			c.Set("Content-Type", tipo)
 		}
-		// Las imagenes son inmutables: la clave lleva el id del plato y
-		// regenerar una foto produce una clave nueva.
+		// Inmutables: cada escritura produce una clave nueva.
 		c.Set("Cache-Control", "public, max-age=31536000, immutable")
 
-		// SIN defer f.Close(). El cuerpo se escribe DESPUES de que este handler
-		// retorna, asi que cerrar aqui manda 0 bytes con un 200 — que fue
-		// exactamente lo que paso al primer intento: el ataque quedaba
-		// bloqueado y las imagenes de verdad salian vacias.
-		//
-		// fasthttp cierra el reader por su cuenta cuando implementa io.Closer,
-		// que es el caso de *os.File.
-		return c.SendStream(f, int(info.Size()))
+		// En memoria y no en streaming: lo que sale por aqui son imagenes de
+		// como mucho unos megas —el tope de subida las acota— y a cambio esto
+		// sirve igual desde el disco que desde un bucket, sin que el handler
+		// sepa cual de los dos hay debajo.
+		return c.Send(datos)
 	}
 }

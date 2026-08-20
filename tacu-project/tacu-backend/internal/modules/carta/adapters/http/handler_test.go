@@ -73,6 +73,10 @@ type fila struct {
 
 func nuevoRepo() *repoFalso { return &repoFalso{filas: map[id.ID]*fila{}} }
 
+func (r *repoFalso) RestauranteDeImportacion(context.Context, id.ID) (id.ID, error) {
+	return id.Nuevo(), nil
+}
+
 func (r *repoFalso) CrearBorrador(_ context.Context, restauranteID, importacionID id.ID,
 	nombre string, _ []domain.Tipo, tokenHash []byte, _ *netip.Addr, estado domain.Estado,
 	_ []string, presupuesto dinero.MicrosUSD) error {

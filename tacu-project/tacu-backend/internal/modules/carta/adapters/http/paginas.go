@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	"tacu-backend/internal/kernel/id"
+	"tacu-backend/internal/modules/carta/app"
 )
 
 // GestorDePaginas son las hojas de la carta de papel: anadir la que falto,
@@ -27,6 +28,12 @@ type GestorDePaginas interface {
 type PaginaDTO struct {
 	Clave string `json:"clave"`
 	URL   string `json:"url"`
+
+	// URLPequena es la de 320 px, para el mosaico del editor, que las pinta a
+	// 104. La grande se guarda intacta porque de ella lee los precios la IA, y
+	// mandar cuatro fotos de telefono para ensenar cuatro sellos es lo que hacia
+	// antes esta pantalla.
+	URLPequena string `json:"url_pequena,omitempty"`
 }
 
 type PaginasDTO struct {
@@ -149,7 +156,7 @@ func (h *Handler) reordenarPaginas(c fiber.Ctx) error {
 func (h *Handler) paginasDTO(claves []string) PaginasDTO {
 	dto := PaginasDTO{Paginas: make([]PaginaDTO, 0, len(claves))}
 	for _, c := range claves {
-		dto.Paginas = append(dto.Paginas, PaginaDTO{Clave: c, URL: h.url(c)})
+		dto.Paginas = append(dto.Paginas, PaginaDTO{Clave: c, URL: h.url(c), URLPequena: h.url(app.MiniaturaDeHoja(c))})
 	}
 	return dto
 }

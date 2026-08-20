@@ -25,6 +25,9 @@ type RepoFotos interface {
 	// o quitar una foto: la clave vive en la fila del plato.
 	PlatoPorID(ctx context.Context, platoID id.ID) (domain.Plato, error)
 
+	// RestauranteDePlato abre la clave del objeto: el almacen guarda por tenant.
+	RestauranteDePlato(ctx context.Context, platoID id.ID) (id.ID, error)
+
 	MarcarFotoLista(ctx context.Context, platoID id.ID, origen domain.OrigenFoto, clave string) error
 	MarcarFotoConEstado(ctx context.Context, platoID id.ID, estado domain.EstadoFoto) error
 	ImportacionDePlato(ctx context.Context, platoID id.ID) (id.ID, error)
@@ -92,7 +95,12 @@ func (uc *Fotos) SubirPropia(ctx context.Context, platoID id.ID, bytes []byte, m
 		return err
 	}
 
-	clave, err := GuardarFoto(ctx, uc.almacen, fmt.Sprintf("fotos/%s/%s", platoID, id.Nuevo()), bytes)
+	restaurante, err := uc.repo.RestauranteDePlato(ctx, platoID)
+	if err != nil {
+		return err
+	}
+
+	clave, err := GuardarFoto(ctx, uc.almacen, ClaveDeFoto(restaurante, platoID), bytes)
 	if err != nil {
 		return fmt.Errorf("guardando la foto: %w", err)
 	}

@@ -529,3 +529,22 @@ func (q *Queries) RestauranteDeImportacion(ctx context.Context, importacionID uu
 	err := row.Scan(&i.ID, &i.Tipos)
 	return i, err
 }
+
+const restauranteDePlato = `-- name: RestauranteDePlato :one
+SELECT i.restaurante_id
+  FROM plato p
+  JOIN importacion i ON i.id = p.importacion_id
+ WHERE p.id = $1
+`
+
+// El restaurante de un plato, en un salto.
+//
+// Hace falta porque la clave del objeto empieza por el tenant y quien sube o
+// reemplaza una foto solo tiene el id del plato. En dos consultas —plato a
+// importacion, importacion a restaurante— serian dos viajes por cada foto.
+func (q *Queries) RestauranteDePlato(ctx context.Context, platoID uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, restauranteDePlato, platoID)
+	var restaurante_id uuid.UUID
+	err := row.Scan(&restaurante_id)
+	return restaurante_id, err
+}

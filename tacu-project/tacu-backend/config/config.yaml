@@ -184,7 +184,30 @@ servidor:
 
 # --- almacen de imagenes ---
 almacen:
-  # Disco para el demo. Mudarse a R2 es un struct nuevo con Guardar y URL: la
-  # base guarda CLAVES, no URLs, justamente para que ese cambio no toque datos.
+  # disco para desarrollo y tests; r2 para lo demas. Mudarse no toca datos: la
+  # base guarda CLAVES, nunca URLs, y la URL la arma quien sirve.
+  #
+  # DISCO aqui a proposito, aunque este despliegue use r2: este fichero esta
+  # versionado y tiene que ser valido por si solo —hay un test que lo comprueba—
+  # y un clon recien bajado tiene que arrancar sin credenciales de nube. Quien
+  # quiere el bucket lo dice en su entorno con TACU_ALMACEN_TIPO=r2.
+  tipo: disco
+
+  # Solo con tipo: disco.
   raiz: ./datos/media
+
+  # El prefijo con el que NUESTRA API sirve las imagenes. Con r2 sigue haciendo
+  # falta: las privadas —las hojas de la carta, el estilo, las referencias—
+  # salen siempre por aqui, y las publicas tambien mientras no haya dominio.
   base: /media
+
+  r2:
+    # Cuenta, clave y secreto NO van aqui: son credenciales y entran por
+    # entorno (R2_CUENTA, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY), igual que
+    # TACU_BD_DSN y las claves de IA. Los buckets tampoco, para que dev y
+    # produccion no compartan fichero.
+    #
+    # dominio_publico vacio = las fotos publicas salen por nuestra API. Ponerlo
+    # las manda derechas al CDN de Cloudflare, con egreso gratis, y es lo unico
+    # que hay que cambiar el dia que el subdominio este atado.
+    dominio_publico: ""

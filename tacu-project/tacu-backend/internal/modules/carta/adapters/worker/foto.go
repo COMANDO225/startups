@@ -185,7 +185,7 @@ func (w *GenerarFoto) Work(ctx context.Context, job *river.Job[GenerarFotoArgs])
 	// ~200 ms sobre 4.2 s y $0.0336, y foto_intentos < 2 garantiza que no se
 	// repita mas de una vez.
 	clave, err := app.GuardarFoto(ctx, w.almacen,
-		fmt.Sprintf("fotos/%s/%s", platoID, id.Nuevo()), img.Bytes)
+		app.ClaveDeFoto(encargo.RestauranteID, platoID), img.Bytes)
 	if err != nil {
 		w.fallo(ctx, platoID, err)
 		return fmt.Errorf("guardando la foto de %q: %w", encargo.Plato.Nombre, err)

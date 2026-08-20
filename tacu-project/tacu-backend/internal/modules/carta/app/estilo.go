@@ -48,6 +48,10 @@ type RepoEstilo interface {
 
 	GuardarBase(ctx context.Context, importacionID id.ID, categoria string, e domain.Estilo) error
 
+	// RestauranteDeImportacion abre la clave del objeto: el almacen guarda por
+	// tenant.
+	RestauranteDeImportacion(ctx context.Context, importacionID id.ID) (id.ID, error)
+
 	ReservarPresupuesto(ctx context.Context, importacionID id.ID, costo dinero.MicrosUSD) (bool, error)
 }
 
@@ -137,8 +141,12 @@ func (uc *EstiloUC) SubirFoto(ctx context.Context, impID id.ID, categoria, cual 
 		return domain.Estilo{}, err
 	}
 
-	clave := fmt.Sprintf("estilo/%s/%s%s", impID, id.Nuevo(), extensionDeImagen(mime))
-	if err := uc.almacen.Guardar(ctx, clave, bytes); err != nil {
+	restaurante, err := uc.repo.RestauranteDeImportacion(ctx, impID)
+	if err != nil {
+		return domain.Estilo{}, err
+	}
+	clave, err := GuardarFoto(ctx, uc.almacen, ClaveDeEstilo(restaurante, impID), bytes)
+	if err != nil {
 		return domain.Estilo{}, fmt.Errorf("guardando la foto del estilo: %w", err)
 	}
 
@@ -213,7 +221,9 @@ func (uc *EstiloUC) Dibujar(ctx context.Context, impID id.ID, categoria, cual st
 		prompt = PromptDeFondo(plegado)
 	}
 
-	bytes, mime, err := uc.pintor.Pintar(uc.atribuir(ctx, impID), prompt)
+	// El mime que devuelve el modelo se descarta: GuardarFoto normaliza a WebP y
+	// la extension la decide el paquete imagen, no el generador.
+	bytes, _, err := uc.pintor.Pintar(uc.atribuir(ctx, impID), prompt)
 	if err != nil {
 		return domain.Estilo{}, fmt.Errorf("dibujando la ranura %s: %w", cual, err)
 	}
@@ -221,8 +231,12 @@ func (uc *EstiloUC) Dibujar(ctx context.Context, impID id.ID, categoria, cual st
 	// Clave nueva en cada dibujo, nunca la misma sobrescrita: el navegador tiene
 	// cacheada la anterior y el dueno veria la de antes creyendo que su cambio
 	// no hizo nada.
-	clave := fmt.Sprintf("estilo/%s/%s%s", impID, id.Nuevo(), extensionDeImagen(mime))
-	if err := uc.almacen.Guardar(ctx, clave, bytes); err != nil {
+	restaurante, err := uc.repo.RestauranteDeImportacion(ctx, impID)
+	if err != nil {
+		return domain.Estilo{}, err
+	}
+	clave, err := GuardarFoto(ctx, uc.almacen, ClaveDeEstilo(restaurante, impID), bytes)
+	if err != nil {
 		return domain.Estilo{}, fmt.Errorf("guardando el dibujo del estilo: %w", err)
 	}
 

@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"path"
+	"strings"
 
 	"tacu-backend/internal/platform/imagen"
 )
@@ -54,10 +56,21 @@ func GuardarHoja(ctx context.Context, alm AlmacenDeImagenes, clave string, bytes
 	if err != nil {
 		// Una hoja que no se puede reducir sigue sirviendo: la lectura usa la
 		// original, y el mosaico se aguanta con ella. No es motivo para
-		// rechazar la subida.
+		// rechazar la subida —una carta en PDF entra por aqui y no se decodifica.
 		return nil
 	}
-	return alm.Guardar(ctx, imagen.ConVariante(clave, imagen.Pequena), vs[imagen.Pequena])
+	return alm.Guardar(ctx, MiniaturaDeHoja(clave), vs[imagen.Pequena])
+}
+
+// MiniaturaDeHoja es la clave de la version pequena de una hoja.
+//
+// Cambia la EXTENSION y no solo anade el sufijo: la hoja se guarda como llego
+// —jpg o pdf— pero su miniatura es WebP, y un archivo llamado .jpg con bytes
+// WebP dentro sale servido como image/jpeg. Los navegadores lo adivinan y por
+// eso no se nota, hasta que algo que no adivina lo lee.
+func MiniaturaDeHoja(clave string) string {
+	sinExt := strings.TrimSuffix(clave, path.Ext(clave))
+	return imagen.ConVariante(sinExt+imagen.Extension, imagen.Pequena)
 }
 
 // borrarFoto se lleva las tres variantes.

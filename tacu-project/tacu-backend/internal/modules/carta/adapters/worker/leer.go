@@ -6,9 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"os"
 	"path/filepath"
 
 	"github.com/riverqueue/river"
@@ -57,8 +55,12 @@ func (LeerCartaArgs) InsertOpts() river.InsertOpts {
 }
 
 // Almacen es lo que el worker necesita para releer las imagenes.
+//
+// Leer y no Abrir: la version anterior devolvia *os.File y lo unico que se hacia
+// con el era io.ReadAll. Eso obligaba a que el almacen fuera un sistema de
+// archivos, que es justo lo que impedia mudarse a un bucket.
 type Almacen interface {
-	Abrir(clave string) (*os.File, error)
+	Leer(ctx context.Context, clave string) ([]byte, string, error)
 }
 
 // Repo es lo que el worker necesita de la persistencia.
@@ -282,12 +284,7 @@ func (w *LeerCarta) leerImagenes(ctx context.Context, impID id.ID) ([]ai.Imagen,
 
 	imagenes := make([]ai.Imagen, 0, len(claves))
 	for _, clave := range claves {
-		f, err := w.almacen.Abrir(clave)
-		if err != nil {
-			return nil, nil, fmt.Errorf("abriendo %s: %w", clave, err)
-		}
-		bytes, err := io.ReadAll(f)
-		_ = f.Close()
+		bytes, _, err := w.almacen.Leer(ctx, clave)
 		if err != nil {
 			return nil, nil, fmt.Errorf("leyendo %s: %w", clave, err)
 		}

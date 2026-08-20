@@ -35,6 +35,10 @@ func (a *almacenFalso) Guardar(_ context.Context, clave string, b []byte) error 
 	return nil
 }
 
+func (r *repoFalso) RestauranteDeImportacion(context.Context, id.ID) (id.ID, error) {
+	return id.Nuevo(), nil
+}
+
 func (a *almacenFalso) Borrar(_ context.Context, clave string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

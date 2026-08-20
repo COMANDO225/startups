@@ -17,6 +17,10 @@ type repoPaginasFalso struct {
 	hojaMarcada string
 }
 
+func (r *repoPaginasFalso) RestauranteDeImportacion(context.Context, id.ID) (id.ID, error) {
+	return id.Nuevo(), nil
+}
+
 func (r *repoPaginasFalso) BorrarPlatosDeLaHoja(_ context.Context, _ id.ID, hoja string) (int, error) {
 	r.hojaMarcada = hoja
 	return 3, nil

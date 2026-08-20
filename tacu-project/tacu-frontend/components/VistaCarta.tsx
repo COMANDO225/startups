@@ -90,7 +90,7 @@ export function VistaCarta({
               <img
                 alt={`Hoja ${i + 1}`}
                 className="size-full object-cover"
-                src={urlMedia(pagina.url)}
+                src={urlMedia(pagina.url_pequena ?? pagina.url)}
               />
               <div className="pointer-events-none absolute inset-0 bg-bloquea/25" />
               <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-bloquea px-2 py-1.5 text-white">
@@ -617,7 +617,7 @@ function Hoja({
           className="size-full object-cover"
           draggable={false}
           loading="lazy"
-          src={urlMedia(pagina.url)}
+          src={urlMedia(pagina.url_pequena ?? pagina.url)}
         />
       )}
 

@@ -3,6 +3,7 @@ package http
 
 import (
 	"tacu-backend/internal/kernel/id"
+	"tacu-backend/internal/modules/carta/app"
 	"tacu-backend/internal/modules/carta/domain"
 	"tacu-backend/internal/platform/imagen"
 )
@@ -213,7 +214,11 @@ func aImportacionDTO(imp domain.Importacion, url URLDeClave, porFoto float64) Im
 	}
 
 	for _, clave := range imp.Imagenes {
-		dto.Paginas = append(dto.Paginas, PaginaDTO{Clave: clave, URL: url(clave)})
+		dto.Paginas = append(dto.Paginas, PaginaDTO{
+			Clave:      clave,
+			URL:        url(clave),
+			URLPequena: url(app.MiniaturaDeHoja(clave)),
+		})
 	}
 
 	for _, cat := range imp.Carta.Categorias {

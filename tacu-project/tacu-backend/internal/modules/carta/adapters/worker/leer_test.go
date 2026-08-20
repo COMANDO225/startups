@@ -4,8 +4,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/riverqueue/river"
@@ -85,17 +83,14 @@ func (r *repoDeEtapas) BancoDePlatos(context.Context) ([]domain.PlatoTipico, err
 }
 func (r *repoDeEtapas) MarcarFallida(context.Context, id.ID, string) error { return nil }
 
-type almacenDeArchivo struct{ ruta string }
+type almacenDeUnaSola struct{ bytes []byte }
 
-func (a almacenDeArchivo) Abrir(string) (*os.File, error) { return os.Open(a.ruta) }
+func (a almacenDeUnaSola) Leer(context.Context, string) ([]byte, string, error) {
+	return a.bytes, "image/jpeg", nil
+}
 
-func almacenDeUnaFoto(t *testing.T) almacenDeArchivo {
-	t.Helper()
-	ruta := filepath.Join(t.TempDir(), "1.jpg")
-	if err := os.WriteFile(ruta, []byte("\xff\xd8\xff no es un jpeg de verdad"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return almacenDeArchivo{ruta: ruta}
+func almacenDeUnaFoto(*testing.T) almacenDeUnaSola {
+	return almacenDeUnaSola{bytes: []byte("\xff\xd8\xff no es un jpeg de verdad")}
 }
 
 type lectorFijo struct{ carta domain.Carta }

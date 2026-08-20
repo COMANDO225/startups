@@ -54,11 +54,37 @@ type Servidor struct {
 }
 
 type Almacen struct {
+	// Tipo elige la implementacion: "disco" para desarrollo y tests, "r2" para
+	// lo demas.
+	Tipo string `koanf:"tipo"`
+
 	// Raiz es donde viven las imagenes en disco.
 	Raiz string `koanf:"raiz"`
-	// Base es el prefijo publico con el que se sirven.
+	// Base es el prefijo con el que las sirve nuestra API.
 	Base string `koanf:"base"`
+
+	R2 R2 `koanf:"r2"`
 }
+
+type R2 struct {
+	// Cuenta, ClaveID y Secreto son credenciales: NO van en el YAML, entran por
+	// entorno como el DSN y las claves de IA.
+	Cuenta  string `koanf:"cuenta"`
+	ClaveID string `koanf:"clave_id"`
+	Secreto string `koanf:"secreto"`
+
+	// Dos buckets porque en R2 el acceso publico es POR BUCKET: no hay carpeta
+	// publica dentro de uno privado.
+	BucketPublico string `koanf:"bucket_publico"`
+	BucketPrivado string `koanf:"bucket_privado"`
+
+	// DominioPublico vacio = las fotos publicas tambien salen por nuestra API.
+	// Es lo que permite ver las imagenes antes de tener el subdominio atado.
+	DominioPublico string `koanf:"dominio_publico"`
+}
+
+// UsaR2 dice si hay que montar el bucket en vez del disco.
+func (a Almacen) UsaR2() bool { return a.Tipo == "r2" }
 
 type IA struct {
 	Proveedores map[string]Proveedor `koanf:"proveedores"`
@@ -93,11 +119,21 @@ type Precio struct {
 // YAML. Existen porque GEMINI_API_KEY es lo que todo el mundo escribe en un
 // .env, y nadie quiere teclear TACU_IA__PROVEEDORES__GEMINI__API_KEY.
 var clavesPorEnv = map[string]string{
-	"GEMINI_API_KEY": "ia.proveedores.gemini.api_key",
-	"OPENAI_API_KEY": "ia.proveedores.openai.api_key",
-	"TACU_BD_DSN":    "bd.dsn",
-	"TACU_PUERTO":    "servidor.puerto",
-	"TACU_ALMACEN":   "almacen.raiz",
+	"GEMINI_API_KEY":    "ia.proveedores.gemini.api_key",
+	"OPENAI_API_KEY":    "ia.proveedores.openai.api_key",
+	"TACU_BD_DSN":       "bd.dsn",
+	"TACU_PUERTO":       "servidor.puerto",
+	"TACU_ALMACEN":      "almacen.raiz",
+	"TACU_ALMACEN_TIPO": "almacen.tipo",
+
+	// Las de R2. Las dos ultimas son credenciales y por eso entran por aqui y
+	// no por el YAML, igual que TACU_BD_DSN.
+	"R2_CUENTA":            "almacen.r2.cuenta",
+	"R2_BUCKET_PUBLICO":    "almacen.r2.bucket_publico",
+	"R2_BUCKET_PRIVADO":    "almacen.r2.bucket_privado",
+	"R2_DOMINIO_PUBLICO":   "almacen.r2.dominio_publico",
+	"R2_ACCESS_KEY_ID":     "almacen.r2.clave_id",
+	"R2_SECRET_ACCESS_KEY": "almacen.r2.secreto",
 }
 
 // Cargar lee el YAML y lo superpone con el entorno.
@@ -167,6 +203,26 @@ func (c *Config) validar() error {
 	}
 	if c.IA.MaxConcurrenciaPorProveedor < 1 {
 		problemas = append(problemas, errors.New("ia.max_concurrencia_por_proveedor debe ser al menos 1"))
+	}
+
+	// Con r2 se exigen las seis de una vez y con su nombre de variable: que el
+	// arranque falle seis veces seguidas, una por cada campo, es tiempo tirado.
+	if c.Almacen.UsaR2() {
+		for _, f := range []struct{ env, valor string }{
+			{"R2_CUENTA", c.Almacen.R2.Cuenta},
+			{"R2_BUCKET_PUBLICO", c.Almacen.R2.BucketPublico},
+			{"R2_BUCKET_PRIVADO", c.Almacen.R2.BucketPrivado},
+			{"R2_ACCESS_KEY_ID", c.Almacen.R2.ClaveID},
+			{"R2_SECRET_ACCESS_KEY", c.Almacen.R2.Secreto},
+		} {
+			if strings.TrimSpace(f.valor) == "" {
+				problemas = append(problemas,
+					fmt.Errorf("almacen.tipo es r2 y falta %s", f.env))
+			}
+		}
+	}
+	if t := c.Almacen.Tipo; t != "" && t != "disco" && t != "r2" {
+		problemas = append(problemas, fmt.Errorf("almacen.tipo %q: solo vale disco o r2", t))
 	}
 
 	// El DSN no se valida aqui: los CLIs de laboratorio no tocan la base y

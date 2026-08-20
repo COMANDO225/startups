@@ -220,3 +220,14 @@ SELECT r.id, r.tipos
   FROM restaurante r
   JOIN importacion i ON i.restaurante_id = r.id
  WHERE i.id = @importacion_id;
+
+-- El restaurante de un plato, en un salto.
+--
+-- Hace falta porque la clave del objeto empieza por el tenant y quien sube o
+-- reemplaza una foto solo tiene el id del plato. En dos consultas —plato a
+-- importacion, importacion a restaurante— serian dos viajes por cada foto.
+-- name: RestauranteDePlato :one
+SELECT i.restaurante_id
+  FROM plato p
+  JOIN importacion i ON i.id = p.importacion_id
+ WHERE p.id = @plato_id;

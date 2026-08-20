@@ -558,6 +558,7 @@ func (r *Repo) ReclamarFoto(ctx context.Context, platoID, importacionID id.ID) (
 			return fmt.Errorf("leyendo el restaurante: %w", err)
 		}
 		encargo.Tipos = domain.TiposValidos(claves(rest.Tipos))
+		encargo.RestauranteID = rest.ID
 
 		base, err := baseDeFoto(ctx, q, rest.ID, fila.Categoria)
 		if err != nil {
@@ -1103,6 +1104,30 @@ func (r *Repo) Base(ctx context.Context, importacionID id.ID, categoria string) 
 	}
 	estilo, err := baseDeFoto(ctx, r.q, rest.ID, categoria)
 	return domain.TiposValidos(claves(rest.Tipos)), estilo, err
+}
+
+// RestauranteDePlato y RestauranteDeImportacion abren la clave del objeto: el
+// almacen guarda por tenant y el primer segmento es el restaurante.
+func (r *Repo) RestauranteDePlato(ctx context.Context, platoID id.ID) (id.ID, error) {
+	rest, err := r.q.RestauranteDePlato(ctx, platoID)
+	if err != nil {
+		if db.SinFilas(err) {
+			return id.ID{}, ErrNoExiste
+		}
+		return id.ID{}, fmt.Errorf("leyendo el restaurante del plato: %w", err)
+	}
+	return rest, nil
+}
+
+func (r *Repo) RestauranteDeImportacion(ctx context.Context, importacionID id.ID) (id.ID, error) {
+	rest, err := r.q.RestauranteDeImportacion(ctx, importacionID)
+	if err != nil {
+		if db.SinFilas(err) {
+			return id.ID{}, ErrNoExiste
+		}
+		return id.ID{}, fmt.Errorf("leyendo el restaurante de la importacion: %w", err)
+	}
+	return rest.ID, nil
 }
 
 // GuardarAjusteFoto guarda la correccion que el dueno escribio para la foto de

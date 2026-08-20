@@ -20,6 +20,7 @@ var ErrDemasiadasReferencias = errors.New("ya no caben mas fotos de ejemplo")
 // estilo, viven en sus dos ranuras y las gestiona EstiloUC.
 type RepoReferencias interface {
 	PlatoPorID(ctx context.Context, platoID id.ID) (domain.Plato, error)
+	RestauranteDePlato(ctx context.Context, platoID id.ID) (id.ID, error)
 	GuardarReferenciasDePlato(ctx context.Context, platoID id.ID, claves []string) error
 }
 
@@ -43,7 +44,11 @@ func (uc *ReferenciasUC) AgregarAPlato(ctx context.Context, platoID id.ID, bytes
 		return nil, fmt.Errorf("%w: el maximo son %d por plato", ErrDemasiadasReferencias, maxReferencias)
 	}
 
-	clave := fmt.Sprintf("referencias/plato/%s/%s%s", platoID, id.Nuevo(), extensionDeImagen(mime))
+	restaurante, err := uc.repo.RestauranteDePlato(ctx, platoID)
+	if err != nil {
+		return nil, err
+	}
+	clave := ClaveDeReferencia(restaurante, platoID) + extensionDeImagen(mime)
 	if err := uc.almacen.Guardar(ctx, clave, bytes); err != nil {
 		return nil, fmt.Errorf("guardando la foto de ejemplo: %w", err)
 	}

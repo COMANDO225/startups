@@ -1,6 +1,10 @@
 package domain
 
-import "strings"
+import (
+	"strings"
+
+	"tacu-backend/internal/kernel/id"
+)
 
 // Receta son las ranuras variables de una foto. Las rellenan cuatro capas, de la
 // mas general a la mas especifica: tipo de restaurante, base del dueno, formato
@@ -86,6 +90,12 @@ func (r Receta) Sobre(base Receta) Receta {
 // ya viene plegada: el worker no sabe que la jerarquia existe.
 type EncargoDeFoto struct {
 	Plato Plato
+
+	// RestauranteID abre la clave del objeto: el almacen guarda por tenant. Va
+	// en el encargo y no se consulta aparte porque quien lo arma ya lo tiene
+	// delante —lo necesita para los tipos— y una consulta de mas por foto son 74
+	// por carta.
+	RestauranteID id.ID
 
 	// Tipos son los del negocio, en orden: el primero es el principal. Cual de
 	// ellos manda en ESTE plato lo decide TipoDePlato al armar la receta.

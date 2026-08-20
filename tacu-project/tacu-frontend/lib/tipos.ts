@@ -144,6 +144,8 @@ export type Categoria = {
 export type Pagina = {
   clave: string;
   url: string;
+  /** 320 px, para el mosaico. La grande queda intacta: de ella lee la IA. */
+  url_pequena?: string;
 };
 
 export type Restaurante = {

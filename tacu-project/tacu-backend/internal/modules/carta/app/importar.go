@@ -54,6 +54,10 @@ type Repo interface {
 
 	MarcarFallida(ctx context.Context, importacionID id.ID, motivo string) error
 	Obtener(ctx context.Context, importacionID id.ID) (domain.Importacion, error)
+
+	// RestauranteDeImportacion abre la clave del objeto: el almacen guarda por
+	// tenant y el primer segmento es el restaurante.
+	RestauranteDeImportacion(ctx context.Context, importacionID id.ID) (id.ID, error)
 }
 
 // Importar crea el borrador y guarda las fotos de la carta. NO la lee: leerla
@@ -123,7 +127,7 @@ func (uc *Importar) Ejecutar(
 	restauranteID := id.Nuevo()
 	importacionID := id.Nuevo()
 
-	claves, err := uc.guardarHojas(ctx, importacionID, imagenes)
+	claves, err := uc.guardarHojas(ctx, restauranteID, importacionID, imagenes)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +163,12 @@ func (uc *Importar) SubirCarta(ctx context.Context, impID id.ID, imagenes []Imag
 		return fmt.Errorf("%w: %d, el maximo es %d", ErrDemasiadas, len(imagenes), maxImagenes)
 	}
 
-	claves, err := uc.guardarHojas(ctx, impID, imagenes)
+	restauranteID, err := uc.repo.RestauranteDeImportacion(ctx, impID)
+	if err != nil {
+		return err
+	}
+
+	claves, err := uc.guardarHojas(ctx, restauranteID, impID, imagenes)
 	if err != nil {
 		return err
 	}
@@ -194,15 +203,15 @@ func (uc *Importar) Releer(ctx context.Context, impID id.ID) error {
 // guardarHojas escribe los bytes ANTES de tocar la base: al reves habria que
 // limpiar la fila cuando el almacen falla, y limpiar es lo que nunca se ejecuta
 // cuando hace falta.
-func (uc *Importar) guardarHojas(ctx context.Context, impID id.ID, imagenes []Imagen) ([]string, error) {
+func (uc *Importar) guardarHojas(ctx context.Context, restauranteID, impID id.ID, imagenes []Imagen) ([]string, error) {
 	claves := make([]string, 0, len(imagenes))
 	for i, img := range imagenes {
 		ext, ok := extensionDe(img.MIME)
 		if !ok {
 			return nil, fmt.Errorf("%w: %s", ErrImagenInvalida, img.MIME)
 		}
-		clave := fmt.Sprintf("cartas/%s/%d%s", impID, i+1, ext)
-		if err := uc.almacen.Guardar(ctx, clave, img.Bytes); err != nil {
+		clave := ClaveDeHoja(restauranteID, impID, ext)
+		if err := GuardarHoja(ctx, uc.almacen, clave, img.Bytes); err != nil {
 			return nil, fmt.Errorf("guardando la imagen %d: %w", i+1, err)
 		}
 		claves = append(claves, clave)

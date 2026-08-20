@@ -16,6 +16,10 @@ var (
 )
 
 type RepoPaginas interface {
+	// RestauranteDeImportacion abre la clave del objeto: el almacen guarda por
+	// tenant.
+	RestauranteDeImportacion(ctx context.Context, importacionID id.ID) (id.ID, error)
+
 	// BorrarPlatosDeLaHoja borra los platos que salieron de una hoja. Solo se
 	// llama cuando el dueno lo eligio en el aviso, y no tiene vuelta atras.
 	BorrarPlatosDeLaHoja(ctx context.Context, importacionID id.ID, hoja string) (int, error)
@@ -72,10 +76,15 @@ func (uc *PaginasUC) Agregar(ctx context.Context, impID id.ID, bytes []byte, mim
 		return nil, fmt.Errorf("%w: %s", ErrImagenInvalida, mime)
 	}
 
+	restaurante, err := uc.repo.RestauranteDeImportacion(ctx, impID)
+	if err != nil {
+		return nil, err
+	}
+
 	// Nombre irrepetible y no "3.jpg": quitar la pagina 2 y subir otra chocaria
 	// contra el archivo viejo y el dueno veria la hoja equivocada.
-	clave := fmt.Sprintf("cartas/%s/%s%s", impID, id.Nuevo(), ext)
-	if err := uc.almacen.Guardar(ctx, clave, bytes); err != nil {
+	clave := ClaveDeHoja(restaurante, impID, ext)
+	if err := GuardarHoja(ctx, uc.almacen, clave, bytes); err != nil {
 		return nil, fmt.Errorf("guardando la pagina: %w", err)
 	}
 

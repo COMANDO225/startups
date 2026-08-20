@@ -17,6 +17,15 @@ function reintentar(veces: number, error: Error) {
   return veces < 2;
 }
 
+/**
+ * Cada cuanto se rehacen las URLs firmadas de lo privado —las hojas de la carta,
+ * el estilo, las fotos de ejemplo—, que viven una hora.
+ *
+ * React Query pausa el intervalo cuando la pestana no esta a la vista, asi que
+ * esto no genera trafico de fondo: al volver, quien refresca es el foco.
+ */
+const REFRESCO_DE_URLS = 25 * 60 * 1000;
+
 /** Poll mientras la IA lee la carta. Se apaga solo cuando deja de estar "leyendo". */
 export function useImportacion(id: string | undefined) {
   return useQuery<Importacion>({
@@ -24,9 +33,12 @@ export function useImportacion(id: string | undefined) {
     queryFn: () => obtenerImportacion(id!),
     enabled: !!id,
     retry: reintentar,
-    // Solo mientras lee. Es la unica etapa que cambia sola; el resto lo mueve
-    // el dueno y ya invalida la consulta al hacerlo.
-    refetchInterval: (q) => (q.state.data?.estado === "leyendo" ? 1500 : false),
+    // Rapido mientras lee, que es la unica etapa que cambia sola. Despues no se
+    // apaga del todo: esta respuesta trae las URLs firmadas de las hojas y hay
+    // que renovarlas antes de que caduquen, o una sesion larga de edicion
+    // termina con el mosaico en imagenes rotas.
+    refetchInterval: (q) =>
+      q.state.data?.estado === "leyendo" ? 1500 : REFRESCO_DE_URLS,
   });
 }
 

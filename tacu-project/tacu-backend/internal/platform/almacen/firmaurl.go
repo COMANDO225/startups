@@ -24,14 +24,22 @@ type Firmante struct {
 }
 
 // ventanaFirma redondea la caducidad a un limite fijo, asi que una URL vive
-// entre 12 y 24 horas.
+// entre una y dos horas.
 //
 // El redondeo no es adorno: sin el, cada respuesta de la API traeria una URL
 // distinta para la misma imagen —caduca en ahora+X y ahora se mueve—, cada una
 // con su entrada de cache, y el navegador volveria a bajarse las hojas de la
 // carta enteras en cada carga del editor. Redondeando, todas las URLs de una
 // misma ventana salen identicas byte a byte.
-const ventanaFirma = 12 * time.Hour
+//
+// UNA HORA Y NO DOCE porque esto es lo unico que acota el dano de una URL que se
+// escape, y el editor ya no depende de que aguante: refresca sus URLs mientras
+// la pestana esta a la vista y al volver a ella. Sin ese refresco, bajar de doce
+// horas habria sido cambiar un riesgo por imagenes rotas.
+//
+// Si se toca, mirar tambien REFRESCO_DE_URLS y staleTime en el frontend: tienen
+// que quedar holgadamente por debajo.
+const ventanaFirma = time.Hour
 
 // minSecreto. Un secreto corto se adivina offline: quien tenga una URL firmada
 // tiene el mensaje y su HMAC, y puede probar a su ritmo sin tocar el servidor.

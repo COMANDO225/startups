@@ -120,14 +120,15 @@ func TestCaduca(t *testing.T) {
 	u, _ := url.Parse(f.Firmar("/media/"+privada, privada, ahora))
 	q := u.Query()
 
-	// Al filo: una firma hecha al final de una ventana tiene que aguantar las 12
-	// horas que promete. Si el redondeo se hiciera con una sola ventana en vez
-	// de dos, esta seria la que caduca antes de tiempo.
-	if err := f.Comprobar(privada, q.Get("exp"), q.Get("f"), ahora.Add(12*time.Hour)); err != nil {
-		t.Errorf("a las 12 h todavia tenia que valer: %v", err)
+	// Al filo: una firma hecha al FINAL de una ventana tiene que aguantar la
+	// ventana entera igual. Si el redondeo sumara una ventana en vez de dos,
+	// esta seria justo la que caduca antes de tiempo.
+	if err := f.Comprobar(privada, q.Get("exp"), q.Get("f"), ahora.Add(ventanaFirma)); err != nil {
+		t.Errorf("a una ventana todavia tenia que valer: %v", err)
 	}
-	if err := f.Comprobar(privada, q.Get("exp"), q.Get("f"), ahora.Add(25*time.Hour)); !errors.Is(err, ErrCaducada) {
-		t.Errorf("a las 25 h tenia que estar caducada y salio %v", err)
+	if err := f.Comprobar(privada, q.Get("exp"), q.Get("f"),
+		ahora.Add(2*ventanaFirma+time.Second)); !errors.Is(err, ErrCaducada) {
+		t.Errorf("pasadas dos ventanas tenia que estar caducada y salio %v", err)
 	}
 }
 
@@ -138,12 +139,12 @@ func TestLaURLNoSeMueveDentroDeLaVentana(t *testing.T) {
 	base := time.Date(2026, 8, 20, 0, 0, 1, 0, time.UTC)
 
 	primera := f.Firmar("/media/"+privada, privada, base)
-	for _, d := range []time.Duration{time.Second, time.Hour, 11 * time.Hour} {
+	for _, d := range []time.Duration{time.Second, ventanaFirma / 2, ventanaFirma - 2*time.Second} {
 		if got := f.Firmar("/media/"+privada, privada, base.Add(d)); got != primera {
 			t.Errorf("a los %v la URL cambio:\n  %s\n  %s", d, primera, got)
 		}
 	}
-	if got := f.Firmar("/media/"+privada, privada, base.Add(13*time.Hour)); got == primera {
+	if got := f.Firmar("/media/"+privada, privada, base.Add(ventanaFirma)); got == primera {
 		t.Error("pasada la ventana la URL tenia que renovarse")
 	}
 }

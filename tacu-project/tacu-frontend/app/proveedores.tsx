@@ -11,10 +11,17 @@ export function Proveedores({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // La carta no cambia sola salvo por los polls, que ya traen su
-            // intervalo: nada de refetch al volver a la pestana.
-            refetchOnWindowFocus: false,
-            staleTime: 1000,
+            // Volver a la pestana REFRESCA. El comentario de antes decia que la
+            // carta no cambia sola y por eso no hacia falta; dejo de ser verdad
+            // cuando las URLs de las imagenes privadas pasaron a caducar. Una
+            // pestana dejada abierta durante el almuerzo vuelve con enlaces
+            // muertos, y lo que se ve son imagenes rotas.
+            refetchOnWindowFocus: true,
+
+            // Cinco minutos: holgadamente por debajo de la hora que vive una
+            // firma, y suficiente para que alternar de ventana cada rato no
+            // dispare una peticion cada vez.
+            staleTime: 5 * 60 * 1000,
           },
         },
       }),

@@ -154,6 +154,7 @@ export function TarjetaPlato({
       <SheetPlato
         abierto={editando}
         idImportacion={idImportacion}
+        modo={modo}
         plato={plato}
         onAbierto={setEditando}
       />

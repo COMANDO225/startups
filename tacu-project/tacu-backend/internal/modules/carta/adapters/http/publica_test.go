@@ -105,3 +105,22 @@ func cartaConDatosPrivados() domain.Importacion {
 		}}},
 	}
 }
+
+// La referencia lleva clave Y url. El frontend borra por la clave: si el DTO
+// mandara solo la URL, quitar una foto de ejemplo no daria error, simplemente no
+// borraria nada.
+func TestLaReferenciaLlevaSuClave(t *testing.T) {
+	imp := cartaConDatosPrivados()
+	dto := aPlatoDTO(imp.Carta.Categorias[0].Platos[0], func(c string) string { return "/media/" + c + "?firmada" })
+
+	if len(dto.FotoReferencias) != 1 {
+		t.Fatalf("referencias = %d", len(dto.FotoReferencias))
+	}
+	r := dto.FotoReferencias[0]
+	if r.Clave != "r/01a0214b-fa16-78dd-bbbe-d6534b1d93a9/referencias/01a0/suya.jpg" {
+		t.Errorf("clave = %q, y tiene que ser la del almacen, sin la URL alrededor", r.Clave)
+	}
+	if r.URL != "/media/"+r.Clave+"?firmada" {
+		t.Errorf("url = %q", r.URL)
+	}
+}

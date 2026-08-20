@@ -48,6 +48,81 @@ export function guardarToken(id: string, token: string) {
   localStorage.setItem(clave(id), token);
 }
 
+/**
+ * EL INDICE de los restaurantes de este navegador.
+ *
+ * Sin esto, el historial del navegador era la unica forma de volver a una
+ * carta: el token estaba guardado por id, pero nada los enumeraba. Perder la
+ * URL era perder el restaurante aunque su acceso siguiera ahi.
+ *
+ * Guarda tambien el nombre porque leerlo del backend obligaria a una llamada
+ * por restaurante solo para pintar una lista.
+ */
+const CLAVE_INDICE = "tacu.restaurantes";
+
+export type RestauranteRecordado = { id: string; nombre: string };
+
+export function recordarRestaurante(id: string, nombre: string) {
+  const antes = misRestaurantes().filter((r) => r.id !== id);
+  // El ultimo tocado va primero: es al que vuelves.
+  localStorage.setItem(
+    CLAVE_INDICE,
+    JSON.stringify([{ id, nombre }, ...antes].slice(0, 20)),
+  );
+  for (const avisar of oyentes) avisar();
+}
+
+/**
+ * El indice se cachea contra su texto crudo, y NO es una optimizacion: quien lo
+ * lee es useSyncExternalStore, que compara la instantanea por identidad. Un
+ * array nuevo en cada llamada lo hace re-renderizar sin parar.
+ */
+const VACIO: RestauranteRecordado[] = [];
+let indiceCrudo = "";
+let indiceValor: RestauranteRecordado[] = VACIO;
+
+export function misRestaurantes(): RestauranteRecordado[] {
+  if (typeof window === "undefined") return VACIO;
+  const crudo = localStorage.getItem(CLAVE_INDICE) ?? "[]";
+  if (crudo === indiceCrudo) return indiceValor;
+
+  indiceCrudo = crudo;
+  try {
+    const leido: unknown = JSON.parse(crudo);
+    // Un indice roto no puede tumbar la pantalla de inicio: se trata como vacio.
+    indiceValor = Array.isArray(leido)
+      ? (leido.filter(
+          (r) => r && typeof r.id === "string" && typeof r.nombre === "string",
+        ) as RestauranteRecordado[])
+      : VACIO;
+  } catch {
+    indiceValor = VACIO;
+  }
+  return indiceValor;
+}
+
+/** Quien esta pintando la lista. Se avisa al escribir en ESTA pestana; las
+ *  otras se enteran por el evento `storage` del navegador. */
+const oyentes = new Set<() => void>();
+
+export function escucharRestaurantes(avisar: () => void) {
+  oyentes.add(avisar);
+  window.addEventListener("storage", avisar);
+  return () => {
+    oyentes.delete(avisar);
+    window.removeEventListener("storage", avisar);
+  };
+}
+
+export function olvidarRestaurante(id: string) {
+  localStorage.setItem(
+    CLAVE_INDICE,
+    JSON.stringify(misRestaurantes().filter((r) => r.id !== id)),
+  );
+  localStorage.removeItem(clave(id));
+  for (const avisar of oyentes) avisar();
+}
+
 export function obtenerToken(id: string): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(clave(id));
@@ -113,6 +188,7 @@ export async function crearRestaurante(
     body: cuerpo,
   });
   guardarToken(creada.id, creada.token);
+  recordarRestaurante(creada.id, nombre);
   return creada;
 }
 
@@ -263,6 +339,7 @@ export function editarEtiquetas(
  * decida republicar.
  */
 export function guardarNombre(id: string, nombre: string): Promise<void> {
+  recordarRestaurante(id, nombre);
   return pedir(`/v1/importaciones/${id}/nombre`, {
     method: "PUT",
     token: conToken(id),

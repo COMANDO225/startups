@@ -1,7 +1,14 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FalloApi, obtenerFotos, obtenerImportacion } from "./api";
+import {
+  escucharRestaurantes,
+  FalloApi,
+  misRestaurantes,
+  obtenerFotos,
+  obtenerImportacion,
+} from "./api";
 import type { EstadoFotos, Foto, Importacion } from "./tipos";
 
 // Un 401/404/400 no mejora reintentando: es el token, el id o la peticion.
@@ -34,7 +41,8 @@ export function useFotos(id: string | undefined, activo = true) {
     queryFn: () => obtenerFotos(id!),
     enabled: !!id && activo,
     retry: reintentar,
-    refetchInterval: (q) => ((q.state.data?.pendientes ?? 0) > 0 ? 2000 : false),
+    refetchInterval: (q) =>
+      (q.state.data?.pendientes ?? 0) > 0 ? 2000 : false,
   });
 }
 
@@ -48,25 +56,39 @@ export function useFotos(id: string | undefined, activo = true) {
  *
  * Con 60 platos y 60 fotos llegando, la diferencia son 60 renders contra 3600.
  */
-export function useFotoDePlato(idImportacion: string | undefined, idPlato: string) {
+export function useFotoDePlato(
+  idImportacion: string | undefined,
+  idPlato: string,
+) {
   return useQuery<EstadoFotos, Error, Foto | undefined>({
     queryKey: ["fotos", idImportacion],
     queryFn: () => obtenerFotos(idImportacion!),
     enabled: !!idImportacion,
     retry: reintentar,
-    refetchInterval: (q) => ((q.state.data?.pendientes ?? 0) > 0 ? 2000 : false),
+    refetchInterval: (q) =>
+      (q.state.data?.pendientes ?? 0) > 0 ? 2000 : false,
     select: (d) => d.fotos[idPlato],
   });
 }
 
 /** Cuantas fotos faltan y cuanto se lleva gastado. Para la barra de progreso. */
 export function useAvanceDeFotos(id: string | undefined) {
-  return useQuery<EstadoFotos, Error, { pendientes: number; listas: number; total: number; gasto: EstadoFotos["gasto"] }>({
+  return useQuery<
+    EstadoFotos,
+    Error,
+    {
+      pendientes: number;
+      listas: number;
+      total: number;
+      gasto: EstadoFotos["gasto"];
+    }
+  >({
     queryKey: ["fotos", id],
     queryFn: () => obtenerFotos(id!),
     enabled: !!id,
     retry: reintentar,
-    refetchInterval: (q) => ((q.state.data?.pendientes ?? 0) > 0 ? 2000 : false),
+    refetchInterval: (q) =>
+      (q.state.data?.pendientes ?? 0) > 0 ? 2000 : false,
     select: (d) => {
       const fotos = Object.values(d.fotos);
       return {
@@ -77,4 +99,19 @@ export function useAvanceDeFotos(id: string | undefined) {
       };
     },
   });
+}
+
+/**
+ * Los restaurantes de este navegador.
+ *
+ * localStorage es un store externo, asi que se lee con useSyncExternalStore y
+ * no con un efecto: en el servidor no existe, y leerlo durante el render
+ * desharia la hidratacion.
+ */
+export function useMisRestaurantes() {
+  return useSyncExternalStore(
+    escucharRestaurantes,
+    misRestaurantes,
+    () => [] as ReturnType<typeof misRestaurantes>,
+  );
 }

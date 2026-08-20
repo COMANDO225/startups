@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input, Label, TextField } from "@heroui/react";
 import { Lateral } from "@/components/Lateral";
 import { SelectorDeTipos } from "@/components/SelectorDeTipos";
 import { crearRestaurante } from "@/lib/api";
+import { useMisRestaurantes } from "@/lib/hooks";
 import { secciones as armarSecciones } from "@/lib/flujo";
 import { Aviso } from "@/components/ui/Aviso";
 import { Boton } from "@/components/ui/Boton";
@@ -27,6 +29,8 @@ export default function Inicio() {
   const [tipos, setTipos] = useState<string[]>([]);
   const [aviso, setAviso] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
+
+  const mios = useMisRestaurantes();
 
   // Sin restaurante todavia: secciones() ya lo contempla y devuelve el 2 y el 3
   // bloqueados, que es exactamente lo que hay que enseñar aqui.
@@ -91,10 +95,32 @@ export default function Inicio() {
 
           {aviso && <Aviso tono="bloquea">{aviso}</Aviso>}
 
+          {mios.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className="text-[12px] font-medium text-muted">
+                O sigue con uno que ya tienes
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                {mios.map((r) => (
+                  <li key={r.id}>
+                    <Link
+                      className="flex items-center justify-between gap-3 rounded-xl border border-borde-campo bg-surface px-3.5 py-3 text-[13.5px] font-medium transition-colors hover:border-tinta"
+                      href={`/i/${r.id}`}
+                    >
+                      <span className="min-w-0 truncate">{r.nombre}</span>
+                      <span className="shrink-0 text-tenue">→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div>
             <Boton
               disabled={nombre.trim().length === 0 || creando}
               tamano="lg"
+              variante="amarillo"
               type="submit"
             >
               {creando ? "Creando..." : "Continuar"}

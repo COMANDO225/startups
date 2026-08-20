@@ -1,6 +1,78 @@
 import type { Importacion } from "./tipos";
 
 /**
+ * LOS PASOS, que ahora son rutas: /i/{id}/{paso}.
+ *
+ * El orden del array es el del recorrido y de el sale todo lo demas.
+ */
+export const PASOS = [
+  "datos",
+  "carta",
+  "revisar",
+  "fotos",
+  "publicar",
+] as const;
+
+export type Paso = (typeof PASOS)[number];
+
+/** Donde vive cada paso dentro de las tres secciones de la columna. */
+export const DONDE: Record<Paso, { seccion: string; sub: string }> = {
+  datos: { seccion: "restaurante", sub: "datos" },
+  carta: { seccion: "restaurante", sub: "carta" },
+  revisar: { seccion: "carta", sub: "revisar" },
+  fotos: { seccion: "carta", sub: "fotos" },
+  publicar: { seccion: "publicar", sub: "" },
+};
+
+export function pasoValido(s: string | null): Paso | null {
+  return PASOS.includes(s as Paso) ? (s as Paso) : null;
+}
+
+/**
+ * LA REGLA, y la unica. La consumen los tres: el stepper para pintar el
+ * candado, la navegacion para no ir, y el guard de ruta para redirigir.
+ *
+ * Antes vivia escrita tres veces —dos `bloqueada: !leida` y un `sinCarta` que
+ * forzaba la seccion desde la pagina— con criterios parecidos pero no iguales.
+ * Cada estado nuevo (paso con 'nueva' y con 'fallida') habia que acordarse de
+ * los tres sitios.
+ *
+ * Sale del estado REAL de la carta, no de banderas de pantalla.
+ */
+export function puedeIr(paso: Paso, imp?: Importacion): boolean {
+  switch (paso) {
+    // El principio: siempre se puede volver a los datos.
+    case "datos":
+      return true;
+
+    // Entregar las hojas necesita que el restaurante exista.
+    case "carta":
+      return !!imp;
+
+    // Revisar, las fotos y publicar necesitan platos. Con 'nueva', 'leyendo' o
+    // 'fallida' no hay uno solo que ensenar, y una pantalla vacia con un
+    // candado invisible es un punto muerto.
+    default:
+      return imp?.estado === "lista" || imp?.estado === "publicada";
+  }
+}
+
+/**
+ * Donde aterrizar cuando no se pide un paso concreto, o cuando el pedido no se
+ * puede: el mas avanzado que esta carta permite.
+ *
+ * Es la otra mitad de la regla: si hay futuro es porque hay un pasado, asi que
+ * volver a /i/{id} despues de leer la carta no puede devolverte al paso 1.
+ */
+export function alcance(imp?: Importacion): Paso {
+  if (!imp) return "datos";
+  if (imp.estado === "publicada") return "publicar";
+  if (puedeIr("revisar", imp)) return "revisar";
+  return "carta";
+}
+
+
+/**
  * El flujo son TRES SECCIONES con sub-pasos, no una lista plana de pasos.
  *
  * La distincion que lo ordena: un PASO lo recorre el dueno y se navega; una
@@ -26,7 +98,7 @@ export type Seccion = {
   /** Version de una palabra, para cuando no cabe el titulo. */
   corto: string;
   listo: boolean;
-  /** Bloqueada: todavia no hay carta que revisar. */
+  /** Bloqueada: la regla dice que esta carta todavia no llega aqui. */
   bloqueada: boolean;
   subs: SubPaso[];
 };
@@ -84,7 +156,7 @@ export function secciones({
       titulo: "Tu restaurante",
       corto: "Datos",
       listo: leida,
-      bloqueada: false,
+      bloqueada: !puedeIr("datos", importacion),
       subs: [
         {
           id: "datos",
@@ -110,7 +182,7 @@ export function secciones({
       titulo: "Tu catálogo",
       corto: "Catálogo",
       listo: leida && bloquean === 0,
-      bloqueada: !leida,
+      bloqueada: !puedeIr("revisar", importacion),
       subs: [
         {
           id: "revisar",
@@ -135,7 +207,7 @@ export function secciones({
       titulo: "Publicar",
       corto: "Publicar",
       listo: importacion?.estado === "publicada",
-      bloqueada: !leida,
+      bloqueada: !puedeIr("publicar", importacion),
       subs: [],
     },
   ];

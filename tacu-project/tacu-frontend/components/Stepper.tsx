@@ -5,18 +5,26 @@ import { Check, Lock } from "lucide-react";
 import type { Seccion } from "@/lib/flujo";
 
 /**
- * El eje del flujo dentro del rail oscuro: las secciones colgando de una linea
- * vertical, y la abierta despliega sus sub-pasos.
+ * El eje del flujo dentro del rail oscuro.
  *
- * NO usa un boton con variante a proposito. Un fondo por fila, siete apilados,
- * tapa la linea — que es justo lo unico que dice que esto es un recorrido y no
- * una lista de enlaces. La seccion activa si recibe fondo, y por eso se nota.
+ * LA CAPSULA es todo el mecanismo: una pildora amarilla que arranca en el
+ * circulo de la seccion y CRECE hacia abajo hasta el sub-paso donde estas. Su
+ * largo dice a que profundidad del paso estas, sin numeros ni porcentajes.
  *
- * Las medidas estan atadas entre si: la fila mide 34 px, asi que el centro del
- * circulo cae a 17, y de ahi salen el `top` del tramo y el `-bottom` que lo
- * estira hasta el centro del circulo siguiente. Cambiar la altura de la fila
- * obliga a cambiar las tres.
+ * Al cambiar de seccion los sub-pasos se pliegan y la capsula se encoge hasta
+ * volver a ser el circulo: la seccion se compacto, y su indicador tambien.
+ *
+ * LAS MEDIDAS ESTAN ATADAS. Cada fila mide FILA y el circulo CIRCULO, asi que
+ * el circulo cae a (FILA-CIRCULO)/2 del borde. De ahi salen el alto de la
+ * capsula y el del carril; cambiar una obliga a recalcular las otras.
  */
+const FILA = 34;
+const CIRCULO = 26;
+const MARGEN = (FILA - CIRCULO) / 2;
+
+/** Hasta donde llega la capsula con el sub-paso `i` activo. */
+const largoCapsula = (i: number) => FILA * i + FILA + CIRCULO;
+
 export function Stepper({
   secciones,
   seccion,
@@ -30,43 +38,72 @@ export function Stepper({
 }) {
   return (
     <nav aria-label="Pasos" className="flex flex-col gap-1">
-      {secciones.map((s, i) => {
+      {secciones.map((s) => {
         const activa = s.id === seccion;
-        const ultima = i === secciones.length - 1;
+        const abierta = activa && s.subs.length > 0;
+        const iActivo = s.subs.findIndex((sb) => sb.id === sub);
         // El numero se convierte en un visto cuando ya esta hecha Y no estamos
         // en ella: dentro de la seccion, el numero sigue diciendo donde estas.
         const hecha = s.listo && !activa;
 
         return (
           <div key={s.id} className="relative">
-            {!ultima && (
-              <span
-                aria-hidden
-                className={`absolute start-[16px] top-[17px] -bottom-[9px] w-px transition-colors duration-500 ${
-                  s.listo ? "bg-accent/45" : "bg-white/10"
-                }`}
-              />
-            )}
+            {/* El carril: la sombra de la capsula, del largo de la seccion
+                entera. Solo existe desplegada, que es cuando hay recorrido que
+                ensenar. */}
+            <AnimatePresence>
+              {abierta && (
+                <motion.span
+                  animate={{ opacity: 1 }}
+                  aria-hidden
+                  className="absolute start-[3px] top-1 rounded-full bg-white/[0.07]"
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  style={{
+                    width: CIRCULO,
+                    height: largoCapsula(s.subs.length - 1),
+                  }}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* La capsula. Anima el alto y no un scaleY: escalar deformaria las
+                dos tapas redondas, que son justo lo que la hace una pildora. */}
+            <motion.span
+              animate={{
+                height:
+                  abierta && iActivo >= 0 ? largoCapsula(iActivo) : CIRCULO,
+              }}
+              aria-hidden
+              className={`absolute start-[3px] top-1 rounded-full ${
+                activa ? "bg-accent" : s.listo ? "bg-accent/25" : "bg-white/10"
+              }`}
+              initial={false}
+              style={{ width: CIRCULO }}
+              transition={{ duration: 0.42, ease: [0.34, 1.2, 0.4, 1] }}
+            />
 
             <button
               aria-current={activa ? "step" : undefined}
-              className={`relative flex h-[34px] w-full items-center gap-[11px] rounded-full px-[3px] text-start outline-offset-2 outline-accent transition-colors focus-visible:outline-2 disabled:cursor-not-allowed ${
+              className={`relative flex w-full items-center gap-[11px] rounded-full px-[3px] text-start outline-offset-2 outline-accent transition-colors focus-visible:outline-2 disabled:cursor-not-allowed ${
                 activa ? "bg-white/10" : ""
               }`}
               disabled={s.bloqueada}
+              style={{ height: FILA }}
               type="button"
               onClick={() => onIr(s.id)}
             >
               <span
-                className={`grid size-[26px] shrink-0 place-items-center rounded-full font-display text-[12.5px] font-semibold transition-colors duration-300 ${
+                className={`grid shrink-0 place-items-center rounded-full font-display text-[12.5px] font-semibold transition-colors duration-300 ${
                   activa
-                    ? "bg-accent text-tinta"
+                    ? "text-tinta"
                     : s.listo
-                      ? "bg-accent/25 text-accent"
+                      ? "text-accent"
                       : s.bloqueada
-                        ? "bg-white/[0.07] text-white/30"
-                        : "bg-white/10 text-white/60"
+                        ? "text-white/30"
+                        : "text-white/60"
                 }`}
+                style={{ width: CIRCULO, height: CIRCULO }}
               >
                 {s.bloqueada ? (
                   <Lock className="size-3" />
@@ -91,7 +128,7 @@ export function Stepper({
             </button>
 
             <AnimatePresence initial={false}>
-              {activa && s.subs.length > 0 && (
+              {abierta && (
                 <motion.ul
                   animate={{ height: "auto", opacity: 1 }}
                   className="overflow-hidden"
@@ -99,26 +136,40 @@ export function Stepper({
                   initial={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  {s.subs.map((sb) => {
+                  {s.subs.map((sb, j) => {
                     const aqui = sb.id === sub;
+                    // Los que quedan DENTRO de la capsula se pintan en tinta:
+                    // sobre el amarillo, un punto claro no se ve.
+                    const dentro = iActivo >= 0 && j <= iActivo;
                     return (
                       <li key={sb.id}>
                         <button
-                          className="flex w-full items-center gap-[11px] py-[7px] ps-[3px] text-start outline-offset-2 outline-accent focus-visible:outline-2"
+                          className="relative flex w-full items-center gap-[11px] ps-[3px] text-start outline-offset-2 outline-accent focus-visible:outline-2"
+                          style={{ height: FILA }}
                           type="button"
                           onClick={() => onIr(s.id, sb.id)}
                         >
-                          <span className="grid size-[26px] shrink-0 place-items-center">
+                          <span
+                            className="grid shrink-0 place-items-center"
+                            style={{ width: CIRCULO, height: CIRCULO }}
+                          >
                             <span
-                              className={`size-[7px] rounded-full transition-[background-color,transform] duration-300 ${
+                              className={`rounded-full transition-[background-color,width,height] duration-300 ${
                                 sb.ocupado
-                                  ? "anima-late bg-accent"
+                                  ? "anima-late bg-tinta"
                                   : aqui
-                                    ? "scale-[1.15] bg-accent"
-                                    : sb.listo
-                                      ? "bg-accent/45"
-                                      : "bg-white/25"
+                                    ? "bg-tinta"
+                                    : dentro
+                                      ? "bg-tinta/35"
+                                      : sb.listo
+                                        ? "bg-accent/45"
+                                        : "bg-white/25"
                               }`}
+                              style={
+                                aqui
+                                  ? { width: 8, height: 8 }
+                                  : { width: 6, height: 6 }
+                              }
                             />
                           </span>
                           <span

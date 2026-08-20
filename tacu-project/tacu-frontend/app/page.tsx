@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { Input, Label, TextField } from "@heroui/react";
 import { Lateral } from "@/components/Lateral";
 import { SelectorDeTipos } from "@/components/SelectorDeTipos";
@@ -120,7 +121,9 @@ export default function Inicio() {
                       href={`/i/${r.id}`}
                     >
                       <span className="min-w-0 truncate">{r.nombre}</span>
-                      <span className="shrink-0 text-tenue">→</span>
+                      {/* Chevron y no flecha: esto es una fila que abre algo,
+                          no un boton que avanza el flujo. */}
+                      <ChevronRight className="size-4 shrink-0 text-tenue" />
                     </Link>
                   </li>
                 ))}

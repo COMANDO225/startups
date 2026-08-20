@@ -10,6 +10,7 @@ import {
 } from "motion/react";
 import {
   AlertTriangle,
+  ArrowRight,
   FileText,
   Pencil,
   GripVertical,
@@ -218,42 +219,64 @@ export function VistaCarta({
           </Boton>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          <Resumen categorias={importacion.categorias.length} platos={platos} />
-
-          {/* La salida del paso. Era el unico que no tenia ninguna: la pantalla
-              se acababa en el resumen y no decia a donde ir. */}
-          <div className="mt-3 hidden lg:block">
-            <Boton tamano="md" variante="tinta" onClick={onSeguir}>
-              Seguir a tu catálogo →
-            </Boton>
-          </div>
+        <>
+          <Resumen
+            categorias={importacion.categorias.length}
+            platos={platos}
+            onSeguir={onSeguir}
+          />
 
           <BarraAccion
             etiqueta="Seguir a tu catálogo"
             variante="tinta"
             onClick={onSeguir}
           />
-        </div>
+        </>
       )}
     </div>
   );
 }
 
+/**
+ * Lo que sacamos de las hojas, y la salida del paso, en la misma tarjeta.
+ *
+ * Juntos y no en dos bloques: la cifra es lo que sacamos y el boton es ir a
+ * verlo, o sea la misma idea partida en dos. Sueltos, la tarjeta era una caja
+ * ancha con dos numeros en una esquina —vacia en su mayor parte, que se lee
+ * como que falta algo— y el paso acababa en tres bloques de anchos distintos
+ * sin nada que los alineara. Es el mismo reparto que la tarjeta de fotos:
+ * resultado a la izquierda, accion a la derecha.
+ */
 function Resumen({
   platos,
   categorias,
+  onSeguir,
 }: {
   platos: number;
   categorias: number;
+  onSeguir: () => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-7 rounded-[14px] border border-border bg-surface px-4 py-3.5">
-      <Dato n={platos} que={platos === 1 ? "plato" : "platos"} />
-      <Dato
-        n={categorias}
-        que={categorias === 1 ? "categoría" : "categorías"}
-      />
+    <div className="flex items-center gap-4 rounded-[14px] border border-border bg-surface px-4 py-3.5">
+      <div className="flex min-w-0 flex-1 flex-wrap gap-7">
+        <Dato n={platos} que={platos === 1 ? "plato" : "platos"} />
+        <Dato
+          n={categorias}
+          que={categorias === 1 ? "categoría" : "categorías"}
+        />
+      </div>
+
+      {/* En telefono la salida es la barra de abajo, que esta siempre a la
+          vista; repetirla aqui dentro seria el mismo boton dos veces. */}
+      <Boton
+        className="hidden shrink-0 lg:inline-flex"
+        tamano="sm"
+        variante="tinta"
+        onClick={onSeguir}
+      >
+        Seguir a tu catálogo
+        <ArrowRight className="size-4" />
+      </Boton>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { AccionesDeFotos } from "@/components/AccionesDeFotos";
 import { PlatosAusentes } from "@/components/PlatosAusentes";
 import { SheetEstilo } from "@/components/SheetEstilo";
@@ -93,7 +94,8 @@ export default function PasoDelEditor() {
               variante={importacion.puede_publicarse ? "amarillo" : "blanco"}
               onClick={() => router.push(`/i/${id}/publicar`)}
             >
-              Seguir a publicar →
+              Seguir a publicar
+              <ArrowRight className="size-4" />
             </Boton>
             {!importacion.puede_publicarse && (
               <p className="mt-2 text-center text-[11.5px] text-tenue">
@@ -155,7 +157,8 @@ function Revisar({
           Cada precio coincide con lo que dice tu carta.
         </p>
         <Boton variante="tinta" onClick={onSeguir}>
-          Seguir a las fotos →
+          Seguir a las fotos
+          <ArrowRight className="size-4" />
         </Boton>
       </div>
     );

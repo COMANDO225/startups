@@ -45,7 +45,19 @@ export default function Inicio() {
       // crearRestaurante guarda el token ANTES de devolver: se navega despues,
       // nunca antes, porque el token viaja una sola vez.
       const creado = await crearRestaurante(nombre.trim(), tipos);
-      router.push(`/i/${creado.id}`);
+
+      // REPLACE, no push, y al MISMO paso.
+      //
+      // Esta pantalla y /i/{id}/datos dibujan el paso 1.1, pero no son la
+      // misma: esta crea y aquella edita datos que ya existen. Con push, el
+      // formulario de creacion se quedaba en el historial, asi que retroceder
+      // desde el paso siguiente devolvia a un "Tus datos" vacio — el nombre y
+      // el tipo ya vivian en el backend bajo su id, no aqui.
+      //
+      // Cambiarla por el paso 1.1 del restaurante recien nacido deja el
+      // historial limpio: hacia adelante se avanza con Continuar, y hacia atras
+      // aparecen sus datos, que es lo que uno espera.
+      router.replace(`/i/${creado.id}/datos`);
     } catch (error) {
       setAviso(
         error instanceof Error

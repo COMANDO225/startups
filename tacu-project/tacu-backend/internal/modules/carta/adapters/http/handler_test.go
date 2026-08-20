@@ -185,11 +185,12 @@ func (r *repoFalso) conFila(importacionID id.ID, aplicar func(*fila)) error {
 // --- montaje ---
 
 type entorno struct {
-	f       *fiber.App
-	repo    *repoFalso
-	lector  *lectorFalso
-	cola    *encoladorFalso
-	paginas *paginasFalsas
+	f          *fiber.App
+	repo       *repoFalso
+	lector     *lectorFalso
+	cola       *encoladorFalso
+	paginas    *paginasFalsas
+	publicador *publicadorFalso
 }
 
 // montar arma el borde entero salvo la base y la IA. El almacen es el de disco
@@ -206,10 +207,11 @@ func montar(t *testing.T, sincrono bool, lector *lectorFalso) *entorno {
 	repo := nuevoRepo()
 	cola := &encoladorFalso{}
 	paginas := &paginasFalsas{}
+	publicador := &publicadorFalso{}
 	h := NuevoHandler(
 		app.NuevoImportar(repo, disco, dinero.USD(3.00)),
 		lector, cola, &fotosFalsas{}, &editorFalso{}, &negocioFalso{}, &estiloFalso{}, &referenciasFalsas{},
-		paginas, &reconocedorFalso{}, &publicadorFalso{},
+		paginas, &reconocedorFalso{}, publicador,
 		repo, disco.URL,
 		slog.New(slog.DiscardHandler),
 		sincrono, 10, 0.0336,
@@ -217,7 +219,7 @@ func montar(t *testing.T, sincrono bool, lector *lectorFalso) *entorno {
 
 	f := fiber.New()
 	h.Montar(f.Group("/v1"))
-	return &entorno{f: f, repo: repo, lector: lector, cola: cola, paginas: paginas}
+	return &entorno{f: f, repo: repo, lector: lector, cola: cola, paginas: paginas, publicador: publicador}
 }
 
 // fotosFalsas no hace nada: los tests del borde HTTP de importaciones no tocan
@@ -330,11 +332,11 @@ func (r *reconocedorFalso) Reconocer(context.Context, id.ID) (int, int, error) {
 	return r.emparejados, r.aprendidos, nil
 }
 
-type publicadorFalso struct{}
+type publicadorFalso struct{ carta domain.Importacion }
 
-func (publicadorFalso) Ejecutar(context.Context, id.ID) (string, error) { return "x", nil }
-func (publicadorFalso) Carta(context.Context, string) (domain.Importacion, error) {
-	return domain.Importacion{}, nil
+func (*publicadorFalso) Ejecutar(context.Context, id.ID) (string, error) { return "x", nil }
+func (p *publicadorFalso) Carta(context.Context, string) (domain.Importacion, error) {
+	return p.carta, nil
 }
 
 // encoladorFalso registra lo que se encolo, sin cola de verdad.

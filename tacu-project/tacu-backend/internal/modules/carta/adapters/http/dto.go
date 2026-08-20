@@ -107,9 +107,11 @@ type PlatoDTO struct {
 	// campo vacio y parece que se perdio.
 	FotoAjuste string `json:"foto_ajuste,omitempty"`
 
-	// URLs, no claves: son para pintarlas. Borrar una concreta va por el
-	// endpoint de referencias, que devuelve las dos listas.
-	FotoReferencias []string `json:"foto_referencias,omitempty"`
+	// Con la clave al lado de la URL. Antes iban solo las URLs y el frontend
+	// sacaba la clave recortando la cadena por "/media/", que es adivinar el
+	// formato de la URL desde el otro lado: en cuanto la URL llevo firma la clave
+	// salio con la query pegada y borrar dejo de funcionar en silencio.
+	FotoReferencias []ReferenciaDTO `json:"foto_referencias,omitempty"`
 
 	// Ausente: la ultima lectura ya no lo trajo. Sigue aqui con su foto hasta
 	// que el dueno diga.
@@ -239,7 +241,7 @@ func aPlatoDTO(p domain.Plato, url URLDeClave) PlatoDTO {
 		Precios:         make([]PrecioDTO, 0, len(p.Precios)),
 		Desde:           p.Desde().String(),
 		FotoAjuste:      p.FotoAjuste,
-		FotoReferencias: urls(p.FotoReferencias, url),
+		FotoReferencias: referenciasDTO(p.FotoReferencias, url),
 		Ausente:         p.Ausente,
 		Hoja:            p.Hoja,
 		Foto:            aFotoDTO(p.Foto, url),
@@ -266,3 +268,80 @@ func aPlatoDTO(p domain.Plato, url URLDeClave) PlatoDTO {
 }
 
 func parsearID(s string) (id.ID, bool) { return id.Parsear(s) }
+
+// --- la carta publica ---
+
+// El comensal recibe SOLO esto. No es ahorrar bytes: /v1/r/{slug} se sirve sin
+// token porque el enlace se reparte por WhatsApp, y el slug sale del nombre del
+// restaurante, o sea que se adivina escribiendolo.
+//
+// Devolver ahi el ImportacionDTO entero —que es lo que hacia— entregaba a
+// cualquiera las URL de las hojas de la carta de papel, las fotos de ejemplo que
+// subio el dueno, cuanto lleva gastado, su presupuesto y cuantos platos tiene
+// marcados para revisar. Firmar las URL no lo arregla: este endpoint las firmaba
+// en el momento.
+type CartaPublicaDTO struct {
+	Restaurante RestauranteDTO        `json:"restaurante"`
+	Categorias  []CategoriaPublicaDTO `json:"categorias"`
+}
+
+type CategoriaPublicaDTO struct {
+	Nombre string            `json:"nombre"`
+	Platos []PlatoPublicoDTO `json:"platos"`
+}
+
+type PlatoPublicoDTO struct {
+	ID          string             `json:"id"`
+	Nombre      string             `json:"nombre"`
+	Descripcion string             `json:"descripcion,omitempty"`
+	Precios     []PrecioPublicoDTO `json:"precios"`
+
+	// Grande para la miniatura de WhatsApp, que la quiere de verdad, y Pequena
+	// para la lista, que la pinta a 80 px. Sin Media: aqui no hay tarjeta de
+	// editor. Vacias mientras la foto no este lista.
+	Foto FotoPublicaDTO `json:"foto"`
+}
+
+type PrecioPublicoDTO struct {
+	Etiqueta string `json:"etiqueta,omitempty"`
+	Soles    string `json:"soles"`
+}
+
+// Sin estado ni origen: que una foto la haya hecho una IA es asunto del
+// restaurante, no del comensal.
+type FotoPublicaDTO struct {
+	URL        string `json:"url,omitempty"`
+	URLPequena string `json:"url_pequena,omitempty"`
+}
+
+func aCartaPublicaDTO(imp domain.Importacion, url URLDeClave) CartaPublicaDTO {
+	dto := CartaPublicaDTO{
+		Restaurante: RestauranteDTO{Nombre: imp.Restaurante.Nombre, Slug: imp.Restaurante.Slug},
+		Categorias:  make([]CategoriaPublicaDTO, 0, len(imp.Carta.Categorias)),
+	}
+
+	for _, cat := range imp.Carta.Categorias {
+		c := CategoriaPublicaDTO{Nombre: cat.Nombre, Platos: make([]PlatoPublicoDTO, 0, len(cat.Platos))}
+		for _, p := range cat.Platos {
+			plato := PlatoPublicoDTO{
+				ID:          p.ID.String(),
+				Nombre:      p.Nombre,
+				Descripcion: p.Descripcion,
+				Precios:     make([]PrecioPublicoDTO, 0, len(p.Precios)),
+			}
+			for _, pr := range p.Precios {
+				plato.Precios = append(plato.Precios,
+					PrecioPublicoDTO{Etiqueta: pr.Etiqueta, Soles: pr.Centimos.String()})
+			}
+			if p.Foto.Clave != "" {
+				plato.Foto = FotoPublicaDTO{
+					URL:        url(p.Foto.Clave),
+					URLPequena: url(imagen.ConVariante(p.Foto.Clave, imagen.Pequena)),
+				}
+			}
+			c.Platos = append(c.Platos, plato)
+		}
+		dto.Categorias = append(dto.Categorias, c)
+	}
+	return dto
+}

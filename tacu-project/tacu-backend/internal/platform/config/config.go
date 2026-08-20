@@ -63,6 +63,14 @@ type Almacen struct {
 	// Base es el prefijo con el que las sirve nuestra API.
 	Base string `koanf:"base"`
 
+	// FirmaSecreto firma las URLs de las imagenes privadas. Credencial: entra
+	// por TACU_MEDIA_SECRETO, nunca por el YAML.
+	//
+	// No se valida aqui sino en core.Armar, como el DSN: los CLIs de laboratorio
+	// no sirven imagenes y exigirselo los rompe. Quien lo necesita es quien monta
+	// la ruta /media.
+	FirmaSecreto string `koanf:"firma_secreto"`
+
 	R2 R2 `koanf:"r2"`
 }
 
@@ -134,6 +142,9 @@ var clavesPorEnv = map[string]string{
 	"R2_DOMINIO_PUBLICO":   "almacen.r2.dominio_publico",
 	"R2_ACCESS_KEY_ID":     "almacen.r2.clave_id",
 	"R2_SECRET_ACCESS_KEY": "almacen.r2.secreto",
+
+	// Con lo que se firman las URLs de lo privado. Credencial: fuera del YAML.
+	"TACU_MEDIA_SECRETO": "almacen.firma_secreto",
 }
 
 // Cargar lee el YAML y lo superpone con el entorno.

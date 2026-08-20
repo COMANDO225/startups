@@ -52,5 +52,5 @@ func (h *Handler) cartaPublica(c fiber.Ctx) error {
 	if err != nil {
 		return traducirError(c, err)
 	}
-	return c.JSON(aImportacionDTO(imp, h.url, h.porFotoUSD))
+	return c.JSON(aCartaPublicaDTO(imp, h.url))
 }

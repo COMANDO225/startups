@@ -29,8 +29,6 @@ type Almacen interface {
 	// una foto, y reintentar esa operacion no puede romperse por una variante
 	// que ya se fue.
 	Borrar(ctx context.Context, clave string) error
-
-	URL(clave string) string
 }
 
 // Repo es lo que Importar necesita de la persistencia, declarado aqui y no en el

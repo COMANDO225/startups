@@ -18,10 +18,24 @@ type GestorDeReferencias interface {
 	QuitarDePlato(ctx context.Context, platoID id.ID, clave string) ([]string, error)
 }
 
+// ReferenciaDTO lleva la clave junto a la URL: la URL para pintarla, la clave
+// para borrar esa y no otra. Juntas y no en dos listas paralelas, que se
+// desalinean en cuanto una de las dos se filtra o se reordena.
+type ReferenciaDTO struct {
+	Clave string `json:"clave"`
+	URL   string `json:"url"`
+}
+
 type ReferenciasDTO struct {
-	// URLs para pintarlas; Claves para poder borrar una concreta.
-	URLs   []string `json:"urls"`
-	Claves []string `json:"claves"`
+	Referencias []ReferenciaDTO `json:"referencias"`
+}
+
+func referenciasDTO(claves []string, url URLDeClave) []ReferenciaDTO {
+	fuera := make([]ReferenciaDTO, 0, len(claves))
+	for _, c := range claves {
+		fuera = append(fuera, ReferenciaDTO{Clave: c, URL: url(c)})
+	}
+	return fuera
 }
 
 func (h *Handler) montarReferencias(r fiber.Router) {
@@ -51,7 +65,7 @@ func (h *Handler) subirReferenciaDePlato(c fiber.Ctx) error {
 	if err != nil {
 		return traducirError(c, err)
 	}
-	return c.JSON(ReferenciasDTO{URLs: urls(claves, h.url), Claves: claves})
+	return c.JSON(ReferenciasDTO{Referencias: referenciasDTO(claves, h.url)})
 }
 
 func (h *Handler) quitarReferenciaDePlato(c fiber.Ctx) error {
@@ -71,7 +85,7 @@ func (h *Handler) quitarReferenciaDePlato(c fiber.Ctx) error {
 	if err != nil {
 		return traducirError(c, err)
 	}
-	return c.JSON(ReferenciasDTO{URLs: urls(claves, h.url), Claves: claves})
+	return c.JSON(ReferenciasDTO{Referencias: referenciasDTO(claves, h.url)})
 }
 
 // leerImagenSubida es lo comun a subir una foto y subir una referencia.

@@ -211,9 +211,19 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	paginas := app.NuevasPaginas(repo, alm)
 	publicar := app.NuevoPublicar(repo)
 
+	// Las imagenes privadas se autorizan por su URL, porque un <img src> no manda
+	// cabeceras. Se arma antes que el handler porque el handler ya recibe la
+	// funcion de URLs envuelta: asi no queda ni un sitio que pueda armar una sin
+	// firmar.
+	firmante, err := almacen.NuevoFirmante(cfg.Almacen.FirmaSecreto)
+	if err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("TACU_MEDIA_SECRETO: %w", err)
+	}
+
 	handler := cartahttp.NuevoHandler(
 		importar, lector, encolador{cola, log}, fotos, editar, repo, estilo, referencias, paginas,
-		conocedor, publicar, repo, alm.URL, log,
+		conocedor, publicar, repo, firmante.Envolver(alm.URL), log,
 		cfg.Servidor.LeerCartaSincrono, cfg.Servidor.TamanoMaxSubidaMB, costoFoto.Dolares(),
 	)
 
@@ -242,19 +252,15 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	v1 := f.Group("/v1")
 	handler.Montar(v1)
 
-	// Las imagenes se sirven desde el mismo binario.
+	// Las imagenes se sirven desde el mismo binario. Lo privado —las hojas de la
+	// carta, el estilo, las referencias— solo con la URL firmada; lo publico, que
+	// es el catalogo, sin nada.
 	//
-	// ESTA RUTA NO COMPRUEBA NADA, y con las privadas si tiene contras: la hoja
-	// de carta de un restaurante la abre cualquiera que conozca su clave. Que la
-	// clave sea un uuidv7 lo hace improbable, no imposible, y "improbable de
-	// adivinar" no es un control de acceso.
-	//
-	// No se arregla con el token en la cabecera: un <img src> del navegador no
-	// manda cabeceras. Lo que toca es firmar la URL de lo privado —un HMAC con
-	// caducidad en la query, que URL() anade y esto verifica—, y para eso el
-	// prefijo r/{restaurante}/ que ya llevan las claves da a quien pertenece
-	// cada objeto.
-	f.Get(cfg.Almacen.Base+"/*", servirMedia(alm))
+	// nolint:contextcheck // contextcheck quiere que el closure reciba un ctx por
+	// parametro. Un fiber.Handler tiene la firma que tiene, y el contexto que hay
+	// que propagar —el de la peticion— sale de c.Context() ahi dentro, que es lo
+	// que hace.
+	f.Get(cfg.Almacen.Base+"/*", servirMedia(alm, firmante))
 
 	// nolint:contextcheck // El linter quiere que este closure propague el ctx de
 	// Armar, y eso seria un bug: ese contexto es el del ARRANQUE y cmd/api lo
@@ -386,9 +392,17 @@ type LectorDeImagenes interface {
 	Leer(ctx context.Context, clave string) ([]byte, string, error)
 }
 
-func servirMedia(alm LectorDeImagenes) fiber.Handler {
+func servirMedia(alm LectorDeImagenes, firmante *almacen.Firmante) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		clave := c.Params("*")
+
+		// Se comprueba con la MISMA variable que despues se lee. Hacerlo en un
+		// middleware aparte obligaria a volver a sacar la clave de la ruta, y ahi
+		// nace el fallo clasico: el que autoriza mira una clave y el que abre
+		// abre otra.
+		if err := firmante.Comprobar(clave, c.Query("exp"), c.Query("f"), time.Now()); err != nil {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
+		}
 
 		// La ruta viene de la URL, o sea del usuario. NO se concatena con
 		// ninguna raiz: quien lee sabe confinar —el disco con os.Root, el bucket
@@ -403,8 +417,15 @@ func servirMedia(alm LectorDeImagenes) fiber.Handler {
 		if tipo != "" {
 			c.Set("Content-Type", tipo)
 		}
-		// Inmutables: cada escritura produce una clave nueva.
-		c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		// Inmutables: cada escritura produce una clave nueva. Lo privado va como
+		// private para que no lo guarde una cache compartida; que el navegador se
+		// lo quede mas alla de la caducidad no estorba —el contenido no cambia y
+		// es su dueno quien lo tiene—, y ahorra volver a bajarlo.
+		cache := "public, max-age=31536000, immutable"
+		if !almacen.EsPublica(clave) {
+			cache = "private, max-age=31536000, immutable"
+		}
+		c.Set("Cache-Control", cache)
 
 		// En memoria y no en streaming: lo que sale por aqui son imagenes de
 		// como mucho unos megas —el tope de subida las acota— y a cambio esto

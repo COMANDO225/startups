@@ -54,14 +54,19 @@ export type Plato = {
   /** Lo que el dueno escribio para corregir la foto de ESTE plato. */
   foto_ajuste?: string;
 
-  /** URLs de las fotos de ejemplo del plato. */
-  foto_referencias?: string[];
+  /** Las fotos de ejemplo del plato. La clave es lo que identifica una al borrarla. */
+  foto_referencias?: Referencia[];
 
   /** La ultima lectura ya no lo trajo. */
   ausente?: boolean;
 
   /** Clave de la hoja de la que salio. Vacia si no se sabe. */
   hoja?: string;
+};
+
+export type Referencia = {
+  clave: string;
+  url: string;
 };
 
 export type TipoRestaurante = {
@@ -126,7 +131,7 @@ export type TiposDeNegocio = {
   reparto: Reparto;
 };
 
-export type Referencias = { urls: string[]; claves: string[] };
+export type Referencias = { referencias: Referencia[] };
 
 export type Publicada = { slug: string; ruta: string };
 
@@ -176,6 +181,31 @@ export type Importacion = {
   /** Hojas que se estan leyendo AHORA. No esconde la carta: solo avisa de que vienen mas platos. */
 
   puede_publicarse: boolean;
+};
+
+/**
+ * Lo que devuelve /v1/r/{slug}, que se sirve SIN token: solo lo que ve el
+ * comensal. No es el mismo tipo que Importacion a proposito —antes si lo era, y
+ * ese endpoint entregaba a cualquiera las hojas de la carta del dueno y cuanto
+ * llevaba gastado—.
+ */
+export type CartaPublica = {
+  restaurante: Restaurante;
+  categorias: CategoriaPublica[];
+};
+
+export type CategoriaPublica = {
+  nombre: string;
+  platos: PlatoPublico[];
+};
+
+export type PlatoPublico = {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  precios: { etiqueta?: string; soles: string }[];
+  /** url es la grande, para la miniatura de WhatsApp; url_pequena para la lista. */
+  foto: { url?: string; url_pequena?: string };
 };
 
 export type ImportacionCreada = {

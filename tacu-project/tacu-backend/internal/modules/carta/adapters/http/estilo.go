@@ -236,11 +236,3 @@ func (h *Handler) guardarTipos(c fiber.Ctx) error {
 	}
 	return c.SendStatus(http.StatusNoContent)
 }
-
-func urls(claves []string, url URLDeClave) []string {
-	fuera := make([]string, 0, len(claves))
-	for _, c := range claves {
-		fuera = append(fuera, url(c))
-	}
-	return fuera
-}

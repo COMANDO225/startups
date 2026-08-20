@@ -187,15 +187,15 @@ export function SheetPlato({
               </Description>
 
               <div className="flex flex-wrap gap-2">
-                {referencias.map((url) => (
+                {referencias.map((referencia) => (
                   <Miniatura
-                    key={url}
-                    url={url}
+                    key={referencia.clave}
+                    url={referencia.url}
                     onQuitar={async () => {
                       await quitarReferenciaDePlato(
                         idImportacion,
                         plato.id,
-                        claveDe(url),
+                        referencia.clave,
                       );
                       await refrescarCarta();
                     }}
@@ -270,11 +270,6 @@ export function SheetPlato({
       )}
     </Panel>
   );
-}
-
-/** La API devuelve URLs para pintar; borrar necesita la clave, que es la cola. */
-function claveDe(url: string): string {
-  return url.replace(/^.*\/media\//, "");
 }
 
 function Miniatura({ url, onQuitar }: { url: string; onQuitar: () => void }) {

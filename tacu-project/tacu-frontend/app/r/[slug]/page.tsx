@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { API } from "@/lib/api";
-import type { Importacion } from "@/lib/tipos";
+import type { CartaPublica } from "@/lib/tipos";
 
 /**
  * La carta publica. Server Component: CERO JavaScript de cliente.
@@ -10,7 +10,7 @@ import type { Importacion } from "@/lib/tipos";
  * un telefono de gama baja con datos moviles, y no tiene ni un boton. Mandarle
  * React para pintar una lista seria cobrarle megas por nada.
  */
-async function cartaDe(slug: string): Promise<Importacion | null> {
+async function cartaDe(slug: string): Promise<CartaPublica | null> {
   const r = await fetch(`${API}/v1/r/${encodeURIComponent(slug)}`, {
     // La carta cambia cuando el dueno republica, no en cada visita.
     next: { revalidate: 60 },
@@ -59,7 +59,7 @@ export default async function CartaPublica({ params }: PageProps<"/r/[slug]">) {
           <ul className="flex flex-col gap-3">
             {categoria.platos.map((plato) => (
               <li key={plato.id} className="flex items-start gap-3">
-                {plato.foto?.url ? (
+                {plato.foto?.url_pequena ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     alt={plato.nombre}
@@ -67,7 +67,10 @@ export default async function CartaPublica({ params }: PageProps<"/r/[slug]">) {
                     // loading lazy: 74 fotos de golpe en datos moviles no se
                     // descargan, se abandonan.
                     loading="lazy"
-                    src={`${API}${plato.foto.url}`}
+                    // La de 320 y no la grande: se pinta a 80 px, y esta pagina
+                    // se abre desde WhatsApp con datos moviles. Medido: 8.9 KB
+                    // contra 46.
+                    src={`${API}${plato.foto.url_pequena}`}
                   />
                 ) : (
                   <span className="size-20 shrink-0 rounded-xl bg-surface-secondary" />

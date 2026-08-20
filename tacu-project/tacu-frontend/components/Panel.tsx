@@ -15,12 +15,21 @@ export function Panel({
   onAbierto,
   titulo,
   descripcion,
+  pie,
   children,
 }: {
   abierto: boolean;
   onAbierto: (v: boolean) => void;
   titulo: string;
   descripcion?: React.ReactNode;
+  /**
+   * La accion principal, anclada abajo y fuera de lo que rueda.
+   *
+   * El cuerpo es la unica zona con scroll, asi que un boton que vive dentro se
+   * va con el contenido y hay que ir a buscarlo al final. Anclado, el dialogo
+   * dice siempre como se sale de el, que es lo que se espera de un modal.
+   */
+  pie?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const escritorio = useEsEscritorio();
@@ -36,6 +45,11 @@ export function Panel({
               {descripcion}
             </Modal.Header>
             <Modal.Body>{children}</Modal.Body>
+            {pie && (
+              <Modal.Footer className="mt-4 border-t border-separator pt-4">
+                {pie}
+              </Modal.Footer>
+            )}
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
@@ -55,6 +69,11 @@ export function Panel({
             {descripcion}
           </Drawer.Header>
           <Drawer.Body>{children}</Drawer.Body>
+          {pie && (
+            <Drawer.Footer className="mt-4 border-t border-separator pt-4">
+              {pie}
+            </Drawer.Footer>
+          )}
         </Drawer.Dialog>
       </Drawer.Content>
     </Drawer.Backdrop>

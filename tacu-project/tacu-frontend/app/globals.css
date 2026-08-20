@@ -71,6 +71,9 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* El destello gris de Android/iOS al tocar delata que esto es una web. Lo que
+     marca el toque es el propio estado del control. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* En movil, un input de menos de 16px hace que Safari haga zoom al enfocarlo y

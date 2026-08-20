@@ -29,6 +29,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   // El rail es oscuro y es lo que pinta la barra del navegador en el movil.
   themeColor: "#14120F",
+  // Para que el contenido llegue hasta el borde y las franjas del sistema se
+  // puedan leer con env(safe-area-inset-*). Sin esto, la barra de accion se
+  // queda debajo del indicador de inicio del iPhone.
+  viewportFit: "cover",
 };
 
 // HeroUI v3 no necesita provider ni "use client": el unico proveedor es el de

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Description, Input, Label, TextField } from "@heroui/react";
 import { guardarNombre } from "@/lib/api";
 import type { Importacion } from "@/lib/tipos";
+import { BarraAccion } from "./BarraAccion";
 import { SelectorDeTipos } from "./SelectorDeTipos";
 import { Boton } from "./ui/Boton";
 
@@ -68,9 +69,11 @@ export function VistaDatos({
 
       <SelectorDeTipos idImportacion={importacion.id} />
 
-      <div>
+      {/* En telefono el CTA vive en la barra de abajo, no aqui. */}
+      <div className="hidden lg:block">
         <Boton
           disabled={nombre.trim() === ""}
+          variante="tinta"
           onClick={() => {
             guardar();
             onSeguir();
@@ -79,6 +82,20 @@ export function VistaDatos({
           Continuar
         </Boton>
       </div>
+      <BarraAccion
+        disabled={nombre.trim() === ""}
+        etiqueta="Continuar"
+        nota={
+          nombre.trim() === ""
+            ? "Escribe el nombre de tu restaurante."
+            : undefined
+        }
+        variante="tinta"
+        onClick={() => {
+          guardar();
+          onSeguir();
+        }}
+      />
     </div>
   );
 }

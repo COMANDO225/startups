@@ -125,7 +125,7 @@ export default function MarcoDelEditor({
         }}
       />
 
-      <main className="anima-panel min-w-0 flex-1 px-[14px] pt-4 pb-24 lg:max-w-[1080px] lg:px-8 lg:pt-[26px] lg:pb-10">
+      <main className="anima-panel min-w-0 flex-1 px-[14px] pt-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:max-w-[1080px] lg:px-8 lg:pt-[26px] lg:pb-10">
         {children}
       </main>
     </div>

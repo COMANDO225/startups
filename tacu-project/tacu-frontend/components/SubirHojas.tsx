@@ -8,6 +8,7 @@ import { subirCarta } from "@/lib/api";
 import { Aviso } from "./ui/Aviso";
 import { Boton } from "./ui/Boton";
 import { Girador } from "./ui/Girador";
+import { BarraAccion } from "./BarraAccion";
 
 const TIPOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAXIMO_HOJAS = 4;
@@ -79,8 +80,8 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
     if (!problema) setArchivos(juntas);
   }
 
-  async function enviar(evento: React.FormEvent) {
-    evento.preventDefault();
+  async function enviar(evento?: React.FormEvent) {
+    evento?.preventDefault();
     if (enviando || archivos.length === 0) return;
     setAviso(null);
     setEnviando(true);
@@ -209,7 +210,7 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
 
       {aviso && <Aviso tono="bloquea">{aviso}</Aviso>}
 
-      <div className="flex flex-col items-start gap-1.5">
+      <div className="hidden flex-col items-start gap-1.5 lg:flex">
         <Boton
           disabled={archivos.length === 0 || enviando}
           tamano="lg"
@@ -224,6 +225,16 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
             : `${archivos.length} de ${MAXIMO_HOJAS} hojas. Tarda unos diez segundos.`}
         </p>
       </div>
+      <BarraAccion
+        disabled={archivos.length === 0 || enviando}
+        etiqueta={enviando ? "Subiendo…" : "Leer mi carta"}
+        nota={
+          archivos.length === 0
+            ? "Sube al menos una hoja."
+            : `${archivos.length} de ${MAXIMO_HOJAS} hojas. Tarda unos diez segundos.`
+        }
+        onClick={() => enviar()}
+      />
     </form>
   );
 }

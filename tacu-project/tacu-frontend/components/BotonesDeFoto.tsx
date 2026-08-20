@@ -39,7 +39,7 @@ export function BotonesDeFoto({
   const subir = (
     <SubirImagen
       compacto
-      etiqueta="Subir imagen"
+      etiqueta="Subir"
       onArchivo={async (archivo) => {
         await subirFotoDePlato(idImportacion, idPlato, archivo);
         await refrescar();

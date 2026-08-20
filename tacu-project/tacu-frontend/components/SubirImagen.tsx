@@ -22,14 +22,16 @@ export function SubirImagen({
   const [subiendo, setSubiendo] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
 
+  // El compacto es el boton fantasma del diseno, con el area de toque de
+  // telefono: por debajo de 40 px el dedo falla.
   const forma = compacto
-    ? "flex-1 h-8 flex-row gap-1.5 rounded-lg border border-default px-3 text-sm hover:bg-surface-secondary"
-    : "size-20 flex-col gap-1 rounded-lg border border-dashed border-default text-[10px] leading-tight hover:border-foreground";
+    ? "min-h-10 flex-1 flex-row gap-1.5 whitespace-nowrap rounded-[9px] bg-hueso px-[15px] text-[12.5px] font-medium text-tinta hover:brightness-[0.98] lg:min-h-[34px]"
+    : "size-20 flex-col gap-1 rounded-xl border border-dashed border-borde-campo text-[10px] leading-tight text-tenue hover:border-tinta hover:text-tinta";
 
   return (
     <label
-      className={`flex cursor-pointer items-center justify-center text-center text-muted ${forma} ${
-        subiendo ? "animate-pulse" : ""
+      className={`flex cursor-pointer items-center justify-center text-center ${forma} ${
+        subiendo ? "opacity-60" : ""
       }`}
       title={fallo ?? etiqueta}
     >

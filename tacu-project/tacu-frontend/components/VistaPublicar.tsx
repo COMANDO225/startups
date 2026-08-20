@@ -7,6 +7,7 @@ import type { Importacion } from "@/lib/tipos";
 import { Aviso } from "./ui/Aviso";
 import { Boton } from "./ui/Boton";
 import { Ficha } from "./ui/Ficha";
+import { BarraAccion } from "./BarraAccion";
 
 /**
  * El ultimo paso: como lo vera el cliente, y el boton que da la URL.
@@ -106,8 +107,9 @@ export function VistaPublicar({ importacion }: { importacion: Importacion }) {
                 <p className="text-sm text-bloquea">{publicar.error.message}</p>
               )}
               <Boton
-                disabled={!importacion.puede_publicarse || publicar.isPending}
                 ancho
+                className="hidden lg:flex"
+                disabled={!importacion.puede_publicarse || publicar.isPending}
                 tamano="lg"
                 variante="amarillo"
                 onClick={() => publicar.mutate()}
@@ -119,6 +121,20 @@ export function VistaPublicar({ importacion }: { importacion: Importacion }) {
           )}
         </div>
       </Ficha>
+
+      {!publicada && (
+        <BarraAccion
+          disabled={!importacion.puede_publicarse || publicar.isPending}
+          etiqueta={publicar.isPending ? "Publicando…" : "Publicar mi carta"}
+          nota={
+            importacion.puede_publicarse
+              ? undefined
+              : `Te faltan ${importacion.marcas.revisar} platos por corregir.`
+          }
+          variante={importacion.puede_publicarse ? "amarillo" : "peligro"}
+          onClick={() => publicar.mutate()}
+        />
+      )}
     </div>
   );
 }

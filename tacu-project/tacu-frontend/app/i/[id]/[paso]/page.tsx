@@ -13,6 +13,7 @@ import { Boton } from "@/components/ui/Boton";
 import { pasoValido } from "@/lib/flujo";
 import { useFotos, useImportacion } from "@/lib/hooks";
 import type { Plato } from "@/lib/tipos";
+import { BarraAccion } from "@/components/BarraAccion";
 
 /**
  * El paso que pide la URL.
@@ -56,19 +57,62 @@ export default function PasoDelEditor() {
       )}
 
       {cual === "revisar" && (
-        <Revisar
-          idImportacion={id}
-          marcados={marcados}
-          onSeguir={() => router.push(`/i/${id}/fotos`)}
-        />
+        <>
+          <Revisar
+            idImportacion={id}
+            marcados={marcados}
+            onSeguir={() => router.push(`/i/${id}/fotos`)}
+          />
+          <BarraAccion
+            etiqueta="Seguir a las fotos"
+            nota={
+              importacion.marcas.revisar > 0
+                ? `${importacion.marcas.revisar} no se publican así.`
+                : undefined
+            }
+            variante={importacion.marcas.revisar > 0 ? "peligro" : "tinta"}
+            onClick={() => router.push(`/i/${id}/fotos`)}
+          />
+        </>
       )}
 
       {cual === "fotos" && (
-        <Catalogo
-          idImportacion={id}
-          importacion={importacion}
-          onEstiloDe={setEstilando}
-        />
+        <>
+          <Catalogo
+            idImportacion={id}
+            importacion={importacion}
+            onEstiloDe={setEstilando}
+          />
+
+          {/* En ancho el CTA cierra el contenido; en telefono vive abajo. */}
+          <div className="mt-8 hidden lg:block">
+            <Boton
+              ancho
+              tamano="lg"
+              variante={importacion.puede_publicarse ? "amarillo" : "blanco"}
+              onClick={() => router.push(`/i/${id}/publicar`)}
+            >
+              Seguir a publicar →
+            </Boton>
+            {!importacion.puede_publicarse && (
+              <p className="mt-2 text-center text-[11.5px] text-tenue">
+                Te faltan {importacion.marcas.revisar} platos por corregir, pero
+                puedes ir viendo cómo queda.
+              </p>
+            )}
+          </div>
+
+          <BarraAccion
+            etiqueta="Seguir a publicar"
+            nota={
+              importacion.puede_publicarse
+                ? undefined
+                : `Te faltan ${importacion.marcas.revisar} por corregir.`
+            }
+            variante={importacion.puede_publicarse ? "amarillo" : "tinta"}
+            onClick={() => router.push(`/i/${id}/publicar`)}
+          />
+        </>
       )}
 
       {cual === "publicar" && <VistaPublicar importacion={importacion} />}

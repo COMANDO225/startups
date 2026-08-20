@@ -25,7 +25,9 @@ const variantes = {
 
 /** Los tres tamanos del diseno, con sus radios: 9 · 11 · 12. */
 const tamanos = {
-  sm: "gap-1.5 rounded-[9px] px-[15px] py-[11px] text-[12.5px] font-medium leading-none",
+  // min-h-10 en telefono: por debajo de 40 px el dedo falla, y aqui se
+  // corrigen precios con el local abierto.
+  sm: "min-h-10 gap-1.5 rounded-[9px] px-[15px] py-[11px] text-[12.5px] font-medium leading-none lg:min-h-[34px]",
   md: "gap-2 rounded-[11px] px-[22px] py-[14px] text-[13.5px] font-semibold leading-none",
   lg: "gap-2 rounded-xl px-[22px] py-4 text-[14.5px] font-semibold leading-none",
 } as const;

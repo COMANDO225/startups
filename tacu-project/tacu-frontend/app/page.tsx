@@ -69,7 +69,7 @@ export default function Inicio() {
         onIr={() => {}}
       />
 
-      <main className="anima-panel min-w-0 flex-1 px-[14px] pt-4 pb-24 lg:max-w-[1080px] lg:px-8 lg:pt-[26px] lg:pb-10">
+      <main className="anima-panel min-w-0 flex-1 px-[14px] pt-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:max-w-[1080px] lg:px-8 lg:pt-[26px] lg:pb-10">
         <form className="flex max-w-xl flex-col gap-7" onSubmit={crear}>
           <div>
             <h1 className="font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em]">

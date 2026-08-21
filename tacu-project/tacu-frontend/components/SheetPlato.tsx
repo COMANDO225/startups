@@ -92,6 +92,12 @@ export function SheetPlato({
   const variasOpciones = plato.precios.length > 1;
   const enFotos = modo === "fotos";
 
+  // Controlada, no por defecto: el pie ancla la accion de la pestana que se ve,
+  // y para eso hay que saber cual es.
+  const [pestana, setPestana] = useState(
+    plato.revisar?.bloquea ? "datos" : "foto",
+  );
+
   // En una variable y no en un componente aparte: asi cierra sobre el estado y
   // las mutaciones que ya estan aqui, en vez de bajarlos todos por props para
   // poder pintar lo mismo en dos sitios.
@@ -132,12 +138,46 @@ export function SheetPlato({
       {guardarDatos.error && (
         <p className="text-sm text-bloquea">{guardarDatos.error.message}</p>
       )}
+    </>
+  );
 
+  // Con un solo precio no hay etiqueta que poner, asi que no hay nada que
+  // guardar: antes esto era un boton "Guardar" permanentemente deshabilitado,
+  // que es prometer una accion que no existe.
+  const accionDeDatos = variasOpciones ? (
+    <Boton
+      ancho
+      disabled={guardarDatos.isPending}
+      onClick={() => guardarDatos.mutate()}
+    >
+      {guardarDatos.isPending ? "Guardando…" : "Guardar"}
+    </Boton>
+  ) : (
+    <Boton ancho onClick={() => onAbierto(false)}>
+      Listo
+    </Boton>
+  );
+
+  const accionDeFoto = (
+    <>
       <Boton
-        disabled={guardarDatos.isPending || !variasOpciones}
-        onClick={() => guardarDatos.mutate()}
+        className="flex-1"
+        disabled={guardarFoto.isPending}
+        variante="blanco"
+        onClick={() => guardarFoto.mutate(false)}
       >
-        {guardarDatos.isPending ? "Guardando..." : "Guardar"}
+        Guardar
+      </Boton>
+      <Boton
+        className="flex-1"
+        disabled={guardarFoto.isPending}
+        onClick={() => guardarFoto.mutate(true)}
+      >
+        {guardarFoto.isPending
+          ? "Pidiendo…"
+          : hayFoto
+            ? "Guardar y corregir"
+            : "Guardar y generar"}
       </Boton>
     </>
   );
@@ -145,18 +185,18 @@ export function SheetPlato({
   return (
     <Panel
       abierto={abierto}
-      descripcion={
-        plato.descripcion && (
-          <p className="text-sm text-muted">{plato.descripcion}</p>
-        )
-      }
+      descripcion={plato.descripcion}
+      pie={enFotos && pestana === "foto" ? accionDeFoto : accionDeDatos}
       titulo={plato.nombre}
       onAbierto={onAbierto}
     >
       {!enFotos ? (
         <div className="flex flex-col gap-4">{datos}</div>
       ) : (
-        <Tabs defaultSelectedKey={plato.revisar?.bloquea ? "datos" : "foto"}>
+        <Tabs
+          selectedKey={pestana}
+          onSelectionChange={(k) => setPestana(String(k))}
+        >
           <Tabs.ListContainer>
             <Tabs.List aria-label="Que editar">
               <Tabs.Tab id="datos">
@@ -243,28 +283,6 @@ export function SheetPlato({
                 {guardarFoto.error.message}
               </p>
             )}
-
-            <div className="flex gap-2">
-              <Boton
-                className="flex-1"
-                disabled={guardarFoto.isPending}
-                variante="blanco"
-                onClick={() => guardarFoto.mutate(false)}
-              >
-                Guardar
-              </Boton>
-              <Boton
-                className="flex-1"
-                disabled={guardarFoto.isPending}
-                onClick={() => guardarFoto.mutate(true)}
-              >
-                {guardarFoto.isPending
-                  ? "Pidiendo..."
-                  : hayFoto
-                    ? "Guardar y corregir"
-                    : "Guardar y generar"}
-              </Boton>
-            </div>
           </Tabs.Panel>
         </Tabs>
       )}

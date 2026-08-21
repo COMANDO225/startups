@@ -157,13 +157,11 @@ export function SheetEstilo({
       abierto={abierto}
       atras={cual ? () => setCual(null) : undefined}
       descripcion={
-        cual ? undefined : (
-          <p className="text-sm text-muted">
-            {categoria
-              ? `Así servimos los platos de ${categoria}.`
-              : "Así servimos tus platos."}
-          </p>
-        )
+        cual
+          ? undefined
+          : categoria
+            ? `Así servimos los platos de ${categoria}.`
+            : "Así servimos tus platos."
       }
       pie={pie}
       titulo={

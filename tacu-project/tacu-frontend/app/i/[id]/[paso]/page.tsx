@@ -172,7 +172,7 @@ function Revisar({
         <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
           Revisa contra tu carta
         </h2>
-        <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+        <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
           {bloquean > 0
             ? `${bloquean} ${bloquean === 1 ? "plato no cuadra" : "platos no cuadran"} y no se publican así. El resto solo hay que mirarlo.`
             : "Nada está roto. Solo confirma que estos están bien."}
@@ -216,7 +216,7 @@ function Catalogo({
           <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
             Tus platos
           </h2>
-          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
             Genera la que falte, sube la tuya o corrige la que hay.
           </p>
         </div>

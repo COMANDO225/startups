@@ -38,6 +38,13 @@ export function Panel({
 }) {
   const escritorio = useEsEscritorio();
 
+  // El parrafo lo pinta el Panel y no quien lo llama. Cada uno de los tres
+  // pasaba su propio <p>: dos con text-sm/text-muted —14 px y el gris de otra
+  // cosa— y uno con el del diseno. El mismo hueco con tres aspectos.
+  const bajada = descripcion && (
+    <p className="text-[13.5px] leading-[1.5] text-parrafo">{descripcion}</p>
+  );
+
   const encabezado = (
     <div className="flex items-center gap-1.5">
       {atras && (
@@ -62,7 +69,7 @@ export function Panel({
             <Modal.CloseTrigger />
             <Modal.Header>
               <Modal.Heading>{encabezado}</Modal.Heading>
-              {descripcion}
+              {bajada}
             </Modal.Header>
             <Modal.Body>{children}</Modal.Body>
             {pie && (
@@ -86,7 +93,7 @@ export function Panel({
           <Drawer.CloseTrigger />
           <Drawer.Header>
             <Drawer.Heading>{encabezado}</Drawer.Heading>
-            {descripcion}
+            {bajada}
           </Drawer.Header>
           <Drawer.Body>{children}</Drawer.Body>
           {pie && (

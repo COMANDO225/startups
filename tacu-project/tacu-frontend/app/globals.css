@@ -50,6 +50,9 @@
 
   /* Lo que el diseno usa y HeroUI no tiene nombre para ello. */
   --color-tinta: #14120f;
+  /* El parrafo que explica un titulo. No es tenue ni muted: es un tercer gris
+     del diseno que estaba escrito a mano en ocho sitios. */
+  --color-parrafo: #8a867d;
   --color-tenue: #9c988e;
   --color-apagado: #b6b2a9;
   --color-crema: #fbfaf8;

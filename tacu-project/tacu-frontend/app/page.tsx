@@ -88,7 +88,7 @@ export default function Inicio() {
             <h1 className="font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em]">
               Tus datos
             </h1>
-            <p className="mt-1.5 max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+            <p className="mt-1.5 max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
               Con el nombre armamos tu dirección web. El tipo de negocio decide
               cómo se emplatan tus fotos.
             </p>

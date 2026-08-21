@@ -47,7 +47,7 @@ export function VistaDatos({
         <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
           Tus datos
         </h2>
-        <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+        <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
           Con el nombre armamos tu dirección web.
         </p>
       </div>

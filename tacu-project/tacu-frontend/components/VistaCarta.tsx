@@ -75,7 +75,7 @@ export function VistaCarta({
           <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
             Tu carta
           </h2>
-          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
             Vuelve a subirla. Tu restaurante y tus datos siguen guardados.
           </p>
         </div>
@@ -91,6 +91,7 @@ export function VistaCarta({
                 alt={`Hoja ${i + 1}`}
                 className="size-full object-cover"
                 src={urlMedia(pagina.url_pequena ?? pagina.url)}
+                onError={caerALaGrande(pagina)}
               />
               <div className="pointer-events-none absolute inset-0 bg-bloquea/25" />
               <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-bloquea px-2 py-1.5 text-white">
@@ -149,7 +150,7 @@ export function VistaCarta({
           <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
             Tu carta
           </h2>
-          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
             Hasta {MAX_PAGINAS} fotos o un PDF. Derechas y con luz: tienen que
             leerse los precios.
           </p>
@@ -166,7 +167,7 @@ export function VistaCarta({
           <h2 className="hidden font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em] lg:block">
             Tu carta
           </h2>
-          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
             {editando
               ? `Añade, quita o reordena tus hojas. Hasta ${MAX_PAGINAS}.`
               : "Las hojas que leímos para armar tu catálogo."}
@@ -463,6 +464,21 @@ function Paginas({
 }
 
 /**
+ * La miniatura de una hoja que no esta, cae a la grande.
+ *
+ * Hace falta un onError porque `url_pequena ?? url` no puede saltar nunca: la
+ * API manda SIEMPRE la url de la miniatura, exista o no el archivo detras.
+ * GuardarHoja se salta la miniatura cuando la imagen no se deja reducir —un PDF,
+ * o una foto de mas de 50 MP—, y ahi el mosaico enseñaba el icono de rota.
+ */
+function caerALaGrande(pagina: Pagina) {
+  return (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const grande = urlMedia(pagina.url);
+    if (grande && e.currentTarget.src !== grande) e.currentTarget.src = grande;
+  };
+}
+
+/**
  * Lo que pasa con los platos de una hoja que se quita.
  *
  * La pregunta se hace ANTES y con el numero delante, porque las dos salidas son
@@ -495,21 +511,21 @@ function AvisoDeQuitarHoja({
       abierto
       descripcion={
         sinOrigen ? (
-          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+          <>
             Esta carta se leyó antes de que guardáramos de qué hoja sale cada
             plato, así que no podemos decirte cuáles salieron de ésta. Se va
             solo la imagen.
-          </p>
+          </>
         ) : platos.length === 0 ? (
-          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+          <>
             Ningún plato de tu catálogo salió de esta hoja, así que solo se va
             la imagen.
-          </p>
+          </>
         ) : (
-          <p className="max-w-[58ch] text-[13.5px] leading-[1.5] text-[#8A867D]">
+          <>
             De esta hoja salieron <strong>{platos.length} productos</strong>
             {conFoto > 0 && <>, {conFoto} con foto ya generada</>}.
-          </p>
+          </>
         )
       }
       titulo={`Quitar la hoja ${numero}`}
@@ -523,43 +539,57 @@ function AvisoDeQuitarHoja({
           src={urlMedia(hoja.url)}
         />
 
+        {/* La que NO destruye es la solida; la que borra platos y fotos ya
+            pagadas va en peligro. Estaba al reves: lo irreversible era el boton
+            oscuro, o sea el que se pulsa sin leer. */}
         {platos.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <Boton
-              disabled={ocupado}
-              tamano="lg"
-              variante="blanco"
-              onClick={() => onQuitar(false)}
-            >
-              Quitar solo la imagen
-            </Boton>
-            <p className="-mt-2 text-xs text-muted">
-              Los {platos.length} productos se quedan en tu catálogo tal como
-              están.
-            </p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Boton
+                ancho
+                disabled={ocupado}
+                tamano="lg"
+                onClick={() => onQuitar(false)}
+              >
+                Quitar solo la imagen
+              </Boton>
+              <p className="text-xs text-muted">
+                Los {platos.length} productos se quedan en tu catálogo tal como
+                están.
+              </p>
+            </div>
 
-            <Boton
-              disabled={ocupado}
-              tamano="lg"
-              onClick={() => onQuitar(true)}
-            >
-              Quitar la imagen y sus {platos.length} productos
-            </Boton>
-            <p className="-mt-2 text-xs text-bloquea">
-              Esto no se puede deshacer
-              {conFoto > 0 && (
-                <>
-                  , y se pierden las {conFoto}{" "}
-                  {conFoto === 1 ? "foto" : "fotos"} que ya pagaste
-                </>
-              )}
-              .
-            </p>
+            <div className="flex flex-col gap-1.5">
+              <Boton
+                ancho
+                disabled={ocupado}
+                tamano="lg"
+                variante="peligro"
+                onClick={() => onQuitar(true)}
+              >
+                Quitar la imagen y sus {platos.length} productos
+              </Boton>
+              <p className="text-xs text-bloquea">
+                Esto no se puede deshacer
+                {conFoto > 0 && (
+                  <>
+                    , y se pierden las {conFoto}{" "}
+                    {conFoto === 1 ? "foto" : "fotos"} que ya pagaste
+                  </>
+                )}
+                .
+              </p>
+            </div>
           </div>
         )}
 
         {platos.length === 0 && (
-          <Boton disabled={ocupado} tamano="lg" onClick={() => onQuitar(false)}>
+          <Boton
+            ancho
+            disabled={ocupado}
+            tamano="lg"
+            onClick={() => onQuitar(false)}
+          >
             Quitar la hoja
           </Boton>
         )}
@@ -618,6 +648,7 @@ function Hoja({
           draggable={false}
           loading="lazy"
           src={urlMedia(pagina.url_pequena ?? pagina.url)}
+          onError={caerALaGrande(pagina)}
         />
       )}
 

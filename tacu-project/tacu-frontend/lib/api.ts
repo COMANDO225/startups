@@ -82,6 +82,20 @@ const VACIO: RestauranteRecordado[] = [];
 let indiceCrudo = "";
 let indiceValor: RestauranteRecordado[] = VACIO;
 
+/**
+ * La instantanea del SERVIDOR, que React usa tambien en el render de
+ * hidratacion. Vacia SIEMPRE.
+ *
+ * No vale misRestaurantes para esto aunque mire `typeof window`: durante la
+ * hidratacion window ya existe, asi que devolvia los restaurantes del navegador
+ * contra un HTML que el servidor genero sin ninguno, y React tiraba la rama
+ * entera. Constante y no `() => []` porque useSyncExternalStore compara la
+ * instantanea por identidad.
+ */
+export function sinRestaurantes(): RestauranteRecordado[] {
+  return VACIO;
+}
+
 export function misRestaurantes(): RestauranteRecordado[] {
   if (typeof window === "undefined") return VACIO;
   const crudo = localStorage.getItem(CLAVE_INDICE) ?? "[]";

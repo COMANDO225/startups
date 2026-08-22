@@ -87,22 +87,22 @@ textarea {
   font-size: max(1rem, 16px);
 }
 
-/* El foco se ve sobre cualquier fondo, incluido el rail oscuro, y `outline` ya
-   sigue el border-radius del propio campo.
-
-   SIN @layer a proposito: el CSS sin capa le gana a `@layer utilities` sin mirar
-   la especificidad, y eso es lo que hace que este foco sobreviva a las
-   utilidades de HeroUI. Metido en una capa, los inputs se quedaban sin foco
-   ninguno.
+/* AQUI NO VA UNA REGLA DE FOCO GLOBAL, y se quito a proposito.
    
-   Por eso la salida es explicita y vive aqui: un campo SIN radio dentro de una
-   caja redondeada dibuja un rectangulo duro dentro de las esquinas, asi que
-   marca data-foco-propio y el indicador lo pone su contenedor. */
-input:not([data-foco-propio]):focus-visible,
-textarea:not([data-foco-propio]):focus-visible {
-  outline: 2px solid var(--foreground);
-  outline-offset: -1px;
-}
+   Habia una que pintaba `outline: 2px solid var(--foreground)` sobre todo input
+   y textarea. Se anadio creyendo que los campos de HeroUI se quedaban sin foco
+   —se midio `outline-style: none` y se dio por hecho—, pero HeroUI no usa
+   outline: usa un anillo de 2px en box-shadow con --accent. O sea que su foco
+   siempre estuvo ahi, y lo unico que hacia la regla era pintar un aro negro
+   encima del amarillo: dos indicadores para un solo estado.
+
+   Hoy no hay ni un solo <input> ni <textarea> crudo en la aplicacion; todos
+   salen de HeroUI con su anillo. El unico propio es el del Compositor, que lleva
+   outline-none y deja el indicador a su contenedor.
+
+   Si algun dia entra un campo suelto, el navegador ya le pone su foco por
+   defecto. Antes de volver a poner una regla global aqui, medir el box-shadow
+   ademas del outline. */
 
 /* Las animaciones del diseno. Todas mueven transform u opacity y nada mas: una
    capa en GPU, cero repintados. Esto corre en el movil del dueno, de pie en su

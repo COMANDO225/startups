@@ -102,7 +102,6 @@ export function Compositor({
 
         <textarea
           ref={caja}
-          data-foco-propio
           className="block w-full resize-none bg-transparent px-3.5 pt-3 pb-1.5 text-[15px] leading-[1.45] outline-none placeholder:text-apagado"
           maxLength={maximo}
           placeholder={placeholder}

@@ -121,6 +121,26 @@ export function useAvanceDeFotos(id: string | undefined) {
  * no con un efecto: en el servidor no existe, y leerlo durante el render
  * desharia la hidratacion.
  */
+// Un store que no cambia nunca: lo unico que interesa es que su instantanea de
+// servidor y la de cliente sean distintas.
+const nadaQueEscuchar = () => () => {};
+
+/**
+ * Si ya se leyo el navegador.
+ *
+ * En el servidor —y en el render de hidratacion, que corre antes de que React
+ * pida la instantanea del cliente— es false. Hace falta para distinguir "no hay
+ * carta" de "todavia no lo se": las dos dan null, y confundirlas le ensena el
+ * formulario de crear a quien ya tiene la suya.
+ */
+export function useYaLeido() {
+  return useSyncExternalStore(
+    nadaQueEscuchar,
+    () => true,
+    () => false,
+  );
+}
+
 export function useMiRestaurante() {
   // La tercera es sinRestaurante y NO miRestaurante: React usa esa tambien en
   // el render de hidratacion, y ahi window ya existe. Ver sinRestaurante.

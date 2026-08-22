@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
 import { Input, Label, TextField } from "@heroui/react";
+import { EsqueletoDePaso } from "@/components/EsqueletoDePaso";
 import { Lateral } from "@/components/Lateral";
 import { SelectorDeTipos } from "@/components/SelectorDeTipos";
 import { crearRestaurante } from "@/lib/api";
-import { useMiRestaurante } from "@/lib/hooks";
+import { useMiRestaurante, useYaLeido } from "@/lib/hooks";
 import { secciones as armarSecciones } from "@/lib/flujo";
 import { Aviso } from "@/components/ui/Aviso";
 import { Boton } from "@/components/ui/Boton";
@@ -32,6 +31,18 @@ export default function Inicio() {
   const [creando, setCreando] = useState(false);
 
   const mia = useMiRestaurante();
+
+  // Si ya hay carta, SE CARGA. No se ofrece crear otra con la vieja debajo: en
+  // este MVP hay una carta por navegador, y esa pantalla obligaba a elegir entre
+  // tu carta y una copia de tu carta. Que es como se llegaba a tener cuatro.
+  useEffect(() => {
+    if (mia) router.replace(`/i/${mia.id}`);
+  }, [mia, router]);
+
+  // Hasta que se lee el navegador no se sabe si hay carta, y el servidor siempre
+  // contesta que no. Sin distinguirlo, quien ya tiene la suya veria el
+  // formulario de crear un fotograma antes de que lo mandemos a ella.
+  const decidiendo = !useYaLeido() || mia !== null;
 
   // Sin restaurante todavia: secciones() ya lo contempla y devuelve el 2 y el 3
   // bloqueados, que es exactamente lo que hay que enseñar aqui.
@@ -83,65 +94,52 @@ export default function Inicio() {
       />
 
       <main className="anima-panel min-w-0 flex-1 px-[14px] pt-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:max-w-[1080px] lg:px-8 lg:pt-[26px] lg:pb-10">
-        <form className="flex max-w-xl flex-col gap-7" onSubmit={crear}>
-          <div>
-            <h1 className="font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em]">
-              Tus datos
-            </h1>
-            <p className="mt-1.5 max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
-              Con el nombre armamos tu dirección web. El tipo de negocio decide
-              cómo se emplatan tus fotos.
-            </p>
-          </div>
-
-          <TextField fullWidth value={nombre} onChange={setNombre}>
-            <Label>Nombre del restaurante</Label>
-            <Input
-              autoComplete="organization"
-              placeholder="Pollería El Rincón"
-            />
-          </TextField>
-
-          {/* Sin idImportacion: el restaurante todavia no existe, asi que la
-              eleccion se guarda aqui y viaja con la creacion. */}
-          <SelectorDeTipos valor={tipos} onCambio={setTipos} />
-
-          {aviso && <Aviso tono="bloquea">{aviso}</Aviso>}
-
-          {/* Una sola, no una lista: en este MVP hay UNA carta por navegador.
-              Varias eran los intentos abandonados apilandose. */}
-          {mia && (
-            <div className="flex flex-col gap-2">
-              <p className="text-[12px] font-medium text-muted">
-                O continúa con tu carta
+        {decidiendo ? (
+          // El mismo hueco que usa /i/{id}: se parece a lo que viene, asi que no
+          // parpadea al cambiar.
+          <EsqueletoDePaso paso="datos" />
+        ) : (
+          <form className="flex max-w-xl flex-col gap-7" onSubmit={crear}>
+            <div>
+              <h1 className="font-display text-xl font-semibold leading-[1.2] tracking-[-0.02em]">
+                Tus datos
+              </h1>
+              <p className="mt-1.5 max-w-[58ch] text-[13.5px] leading-[1.5] text-parrafo">
+                Con el nombre armamos tu dirección web. El tipo de negocio
+                decide cómo se emplatan tus fotos.
               </p>
-              <Link
-                className="flex items-center justify-between gap-3 rounded-xl border border-borde-campo bg-surface px-3.5 py-3 text-[13.5px] font-medium transition-colors hover:border-tinta"
-                href={`/i/${mia.id}`}
-              >
-                <span className="min-w-0 truncate">{mia.nombre}</span>
-                {/* Chevron y no flecha: esto es una fila que abre algo, no un
-                    boton que avanza el flujo. */}
-                <ChevronRight className="size-4 shrink-0 text-tenue" />
-              </Link>
             </div>
-          )}
 
-          <div>
-            <Boton
-              disabled={nombre.trim().length === 0 || creando}
-              tamano="lg"
-              variante="amarillo"
-              type="submit"
-            >
-              {creando ? "Creando..." : "Continuar"}
-            </Boton>
-            <p className="mt-2 text-xs text-muted">
-              Sin registro ni contraseña. Tu carta queda guardada en este
-              navegador.
-            </p>
-          </div>
-        </form>
+            <TextField fullWidth value={nombre} onChange={setNombre}>
+              <Label>Nombre del restaurante</Label>
+              <Input
+                autoComplete="organization"
+                placeholder="Pollería El Rincón"
+              />
+            </TextField>
+
+            {/* Sin idImportacion: el restaurante todavia no existe, asi que la
+              eleccion se guarda aqui y viaja con la creacion. */}
+            <SelectorDeTipos valor={tipos} onCambio={setTipos} />
+
+            {aviso && <Aviso tono="bloquea">{aviso}</Aviso>}
+
+            <div>
+              <Boton
+                disabled={nombre.trim().length === 0 || creando}
+                tamano="lg"
+                variante="amarillo"
+                type="submit"
+              >
+                {creando ? "Creando..." : "Continuar"}
+              </Boton>
+              <p className="mt-2 text-xs text-muted">
+                Sin registro ni contraseña. Tu carta queda guardada en este
+                navegador.
+              </p>
+            </div>
+          </form>
+        )}
       </main>
     </div>
   );

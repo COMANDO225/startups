@@ -50,92 +50,82 @@ export function guardarToken(id: string, token: string) {
 }
 
 /**
- * EL INDICE de los restaurantes de este navegador.
+ * LA carta de este navegador. Una, no una lista.
  *
- * Sin esto, el historial del navegador era la unica forma de volver a una
- * carta: el token estaba guardado por id, pero nada los enumeraba. Perder la
- * URL era perder el restaurante aunque su acceso siguiera ahi.
+ * Un "crear" hace restaurante E importacion nuevos, y actualizar el menu es
+ * editar LA MISMA importacion —anadir hojas, releer—, nunca crear otra. Asi que
+ * varias entradas aqui nunca fueron varios restaurantes: eran los intentos que
+ * el dueno empezo y abandono, acumulandose sin forma de quitarlos. Tener varios
+ * locales de verdad son SEDES, y eso es otra cosa que no es este MVP.
  *
- * Guarda tambien el nombre porque leerlo del backend obligaria a una llamada
- * por restaurante solo para pintar una lista.
+ * Sin esto, volver a una carta dependia del historial del navegador: el token
+ * estaba guardado por id, pero nada lo enumeraba, y perder la URL era perder la
+ * carta aunque el acceso siguiera ahi.
+ *
+ * Guarda el nombre para no llamar al backend solo para pintar un enlace.
  */
-const CLAVE_INDICE = "tacu.restaurantes";
+const CLAVE_CARTA = "tacu.restaurantes";
 
 export type RestauranteRecordado = { id: string; nombre: string };
 
 export function recordarRestaurante(id: string, nombre: string) {
-  const antes = misRestaurantes().filter((r) => r.id !== id);
-  // El ultimo tocado va primero: es al que vuelves.
-  localStorage.setItem(
-    CLAVE_INDICE,
-    JSON.stringify([{ id, nombre }, ...antes].slice(0, 20)),
-  );
+  localStorage.setItem(CLAVE_CARTA, JSON.stringify([{ id, nombre }]));
   for (const avisar of oyentes) avisar();
 }
 
 /**
- * El indice se cachea contra su texto crudo, y NO es una optimizacion: quien lo
- * lee es useSyncExternalStore, que compara la instantanea por identidad. Un
- * array nuevo en cada llamada lo hace re-renderizar sin parar.
+ * La instantanea del SERVIDOR, que React usa TAMBIEN en el render de
+ * hidratacion —y ese ocurre en el navegador, donde window ya existe—. Por eso
+ * no vale miRestaurante aunque mire `typeof window`: devolvia lo guardado
+ * contra un HTML generado sin nada, y React tiraba la rama entera.
  */
-const VACIO: RestauranteRecordado[] = [];
-let indiceCrudo = "";
-let indiceValor: RestauranteRecordado[] = VACIO;
+export function sinRestaurante(): RestauranteRecordado | null {
+  return null;
+}
 
 /**
- * La instantanea del SERVIDOR, que React usa tambien en el render de
- * hidratacion. Vacia SIEMPRE.
- *
- * No vale misRestaurantes para esto aunque mire `typeof window`: durante la
- * hidratacion window ya existe, asi que devolvia los restaurantes del navegador
- * contra un HTML que el servidor genero sin ninguno, y React tiraba la rama
- * entera. Constante y no `() => []` porque useSyncExternalStore compara la
- * instantanea por identidad.
+ * Se cachea contra su texto crudo, y NO es optimizacion: quien lo lee es
+ * useSyncExternalStore, que compara la instantanea por identidad. Un objeto
+ * nuevo en cada llamada lo hace re-renderizar sin parar.
  */
-export function sinRestaurantes(): RestauranteRecordado[] {
-  return VACIO;
+let crudoCache = "";
+let valorCache: RestauranteRecordado | null = null;
+
+export function miRestaurante(): RestauranteRecordado | null {
+  if (typeof window === "undefined") return null;
+  const crudo = localStorage.getItem(CLAVE_CARTA) ?? "";
+  if (crudo === crudoCache) return valorCache;
+  crudoCache = crudo;
+  valorCache = interpretar(crudo);
+  return valorCache;
 }
 
-export function misRestaurantes(): RestauranteRecordado[] {
-  if (typeof window === "undefined") return VACIO;
-  const crudo = localStorage.getItem(CLAVE_INDICE) ?? "[]";
-  if (crudo === indiceCrudo) return indiceValor;
-
-  indiceCrudo = crudo;
+function interpretar(crudo: string): RestauranteRecordado | null {
   try {
     const leido: unknown = JSON.parse(crudo);
-    // Un indice roto no puede tumbar la pantalla de inicio: se trata como vacio.
-    indiceValor = Array.isArray(leido)
-      ? (leido.filter(
-          (r) => r && typeof r.id === "string" && typeof r.nombre === "string",
-        ) as RestauranteRecordado[])
-      : VACIO;
+    // Se guardaba como lista y hay navegadores con varias dentro: se queda la
+    // primera, que es la ultima tocada. Las demas se caen solas, sin migracion
+    // ni cambiar la clave. Una entrada rota se trata como que no hay.
+    const uno = Array.isArray(leido) ? leido[0] : leido;
+    return uno && typeof uno.id === "string" && typeof uno.nombre === "string"
+      ? { id: uno.id, nombre: uno.nombre }
+      : null;
   } catch {
-    indiceValor = VACIO;
+    return null;
   }
-  return indiceValor;
 }
 
-/** Quien esta pintando la lista. Se avisa al escribir en ESTA pestana; las
+/** Quien esta pintando el enlace. Se avisa al escribir en ESTA pestana; las
  *  otras se enteran por el evento `storage` del navegador. */
 const oyentes = new Set<() => void>();
 
-export function escucharRestaurantes(avisar: () => void) {
+export function escucharCarta(avisar: () => void) {
   oyentes.add(avisar);
   window.addEventListener("storage", avisar);
   return () => {
     oyentes.delete(avisar);
     window.removeEventListener("storage", avisar);
   };
-}
-
-export function olvidarRestaurante(id: string) {
-  localStorage.setItem(
-    CLAVE_INDICE,
-    JSON.stringify(misRestaurantes().filter((r) => r.id !== id)),
-  );
-  localStorage.removeItem(clave(id));
-  for (const avisar of oyentes) avisar();
 }
 
 export function obtenerToken(id: string): string | null {

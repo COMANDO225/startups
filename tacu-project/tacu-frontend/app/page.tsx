@@ -8,7 +8,7 @@ import { Input, Label, TextField } from "@heroui/react";
 import { Lateral } from "@/components/Lateral";
 import { SelectorDeTipos } from "@/components/SelectorDeTipos";
 import { crearRestaurante } from "@/lib/api";
-import { useMisRestaurantes } from "@/lib/hooks";
+import { useMiRestaurante } from "@/lib/hooks";
 import { secciones as armarSecciones } from "@/lib/flujo";
 import { Aviso } from "@/components/ui/Aviso";
 import { Boton } from "@/components/ui/Boton";
@@ -31,7 +31,7 @@ export default function Inicio() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
 
-  const mios = useMisRestaurantes();
+  const mia = useMiRestaurante();
 
   // Sin restaurante todavia: secciones() ya lo contempla y devuelve el 2 y el 3
   // bloqueados, que es exactamente lo que hay que enseñar aqui.
@@ -108,26 +108,22 @@ export default function Inicio() {
 
           {aviso && <Aviso tono="bloquea">{aviso}</Aviso>}
 
-          {mios.length > 0 && (
+          {/* Una sola, no una lista: en este MVP hay UNA carta por navegador.
+              Varias eran los intentos abandonados apilandose. */}
+          {mia && (
             <div className="flex flex-col gap-2">
               <p className="text-[12px] font-medium text-muted">
-                O sigue con uno que ya tienes
+                O continúa con tu carta
               </p>
-              <ul className="flex flex-col gap-1.5">
-                {mios.map((r) => (
-                  <li key={r.id}>
-                    <Link
-                      className="flex items-center justify-between gap-3 rounded-xl border border-borde-campo bg-surface px-3.5 py-3 text-[13.5px] font-medium transition-colors hover:border-tinta"
-                      href={`/i/${r.id}`}
-                    >
-                      <span className="min-w-0 truncate">{r.nombre}</span>
-                      {/* Chevron y no flecha: esto es una fila que abre algo,
-                          no un boton que avanza el flujo. */}
-                      <ChevronRight className="size-4 shrink-0 text-tenue" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <Link
+                className="flex items-center justify-between gap-3 rounded-xl border border-borde-campo bg-surface px-3.5 py-3 text-[13.5px] font-medium transition-colors hover:border-tinta"
+                href={`/i/${mia.id}`}
+              >
+                <span className="min-w-0 truncate">{mia.nombre}</span>
+                {/* Chevron y no flecha: esto es una fila que abre algo, no un
+                    boton que avanza el flujo. */}
+                <ChevronRight className="size-4 shrink-0 text-tenue" />
+              </Link>
             </div>
           )}
 

@@ -3,12 +3,12 @@
 import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  escucharRestaurantes,
+  escucharCarta,
   FalloApi,
-  misRestaurantes,
+  miRestaurante,
   obtenerFotos,
   obtenerImportacion,
-  sinRestaurantes,
+  sinRestaurante,
 } from "./api";
 import type { EstadoFotos, Foto, Importacion } from "./tipos";
 
@@ -115,19 +115,14 @@ export function useAvanceDeFotos(id: string | undefined) {
 }
 
 /**
- * Los restaurantes de este navegador.
+ * La carta de este navegador, que es UNA. Ver miRestaurante en api.ts.
  *
  * localStorage es un store externo, asi que se lee con useSyncExternalStore y
  * no con un efecto: en el servidor no existe, y leerlo durante el render
  * desharia la hidratacion.
  */
-export function useMisRestaurantes() {
-  // La tercera es sinRestaurantes y NO misRestaurantes: React usa esa tambien en
-  // el render de hidratacion, y ahi window ya existe, asi que devolvia lo que hay
-  // en el navegador contra un HTML generado sin nada. Ver sinRestaurantes.
-  return useSyncExternalStore(
-    escucharRestaurantes,
-    misRestaurantes,
-    sinRestaurantes,
-  );
+export function useMiRestaurante() {
+  // La tercera es sinRestaurante y NO miRestaurante: React usa esa tambien en
+  // el render de hidratacion, y ahi window ya existe. Ver sinRestaurante.
+  return useSyncExternalStore(escucharCarta, miRestaurante, sinRestaurante);
 }

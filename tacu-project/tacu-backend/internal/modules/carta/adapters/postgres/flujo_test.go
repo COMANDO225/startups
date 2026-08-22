@@ -33,7 +33,7 @@ func TestE2EImportarGalponcito(t *testing.T) {
 		t.Skip("gasta dinero: TACU_E2E=1 para correrlo")
 	}
 
-	r, _ := repo(t)
+	r, pool := repo(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
@@ -65,6 +65,7 @@ func TestE2EImportarGalponcito(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Importar: %v", err)
 	}
+	limpiarAlTerminar(t, pool, b.ID)
 	if b.Token == "" {
 		t.Fatal("no devolvio token: el dueno no podria volver a su borrador")
 	}

@@ -20,7 +20,15 @@ import (
 
 const dsnPorDefecto = "postgres://tacu:tacu@localhost:5433/tacu?sslmode=disable"
 
-func repo(t *testing.T) (*postgres.Repo, *pgxpool.Pool) {
+// banco es el repo con su pool al lado, para que borrador() pueda borrar lo que
+// crea. Va embebido, asi que todo lo que se llamaba sobre *postgres.Repo se
+// sigue llamando igual y ningun test cambia.
+type banco struct {
+	*postgres.Repo
+	pool *pgxpool.Pool
+}
+
+func repo(t *testing.T) (*banco, *pgxpool.Pool) {
 	t.Helper()
 
 	dsn := os.Getenv("TACU_BD_DSN")
@@ -36,10 +44,34 @@ func repo(t *testing.T) (*postgres.Repo, *pgxpool.Pool) {
 		t.Skipf("sin Postgres en %s (docker compose up -d): %v", dsn, err)
 	}
 	t.Cleanup(pool.Close)
-	return postgres.NuevoRepo(pool), pool
+	return &banco{Repo: postgres.NuevoRepo(pool), pool: pool}, pool
 }
 
-func borrador(t *testing.T, r *postgres.Repo) id.ID {
+// limpiarAlTerminar borra el restaurante de una importacion cuando acaba el test.
+//
+// Hace falta porque estos tests hablan con la base de DESARROLLO: el DSN por
+// defecto de aqui es el MISMO que usa el servidor, y sin esto cada corrida del
+// paquete se dejaba 26 restaurantes dentro. Medido antes de arreglarlo: 1836 de
+// los 1850 que habia eran de estos tests, o sea que la base de desarrollo era
+// 99% basura y cada vez se parecia menos a algo real.
+//
+// El cleanup se registra DESPUES del pool.Close de repo(), y por eso corre
+// antes: t.Cleanup es LIFO.
+func limpiarAlTerminar(t *testing.T, pool *pgxpool.Pool, importacionID id.ID) {
+	t.Helper()
+	t.Cleanup(func() {
+		_, err := pool.Exec(context.Background(),
+			"DELETE FROM restaurante WHERE id = (SELECT restaurante_id FROM importacion WHERE id = $1)",
+			importacionID)
+		if err != nil {
+			// Falla el test a proposito: una limpieza que no limpia en silencio
+			// es como llegamos a los 1836.
+			t.Errorf("limpiando lo que creo este test: %v", err)
+		}
+	})
+}
+
+func borrador(t *testing.T, r *banco) id.ID {
 	t.Helper()
 	ctx := context.Background()
 
@@ -52,6 +84,7 @@ func borrador(t *testing.T, r *postgres.Repo) id.ID {
 	if err != nil {
 		t.Fatalf("CrearBorrador: %v", err)
 	}
+	limpiarAlTerminar(t, r.pool, importacionID)
 	return importacionID
 }
 

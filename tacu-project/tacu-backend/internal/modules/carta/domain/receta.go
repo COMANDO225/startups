@@ -39,6 +39,11 @@ type Receta struct {
 	// llena el banco, nunca el dueno.
 	Marca string
 
+	// Curso NO se escribe en el prompt: viaja para que quien matiza sepa a que
+	// familia le esta hablando. Sin el, "Surtido" en la seccion de jugos recibia
+	// la descripcion de un surtido de MARISCOS, y salia un vaso con calamares.
+	Curso string
+
 	Acompanamiento string // lo pone el tipo de restaurante
 	Fondo          string // lo pone el dueno
 	Ajuste         string
@@ -71,6 +76,7 @@ func (r Receta) Sobre(base Receta) Receta {
 		{&r.Reparto, &fuera.Reparto},
 		{&r.Escala, &fuera.Escala},
 		{&r.Marca, &fuera.Marca},
+		{&r.Curso, &fuera.Curso},
 		{&r.Acompanamiento, &fuera.Acompanamiento},
 		{&r.Fondo, &fuera.Fondo},
 		{&r.FotoVajilla, &fuera.FotoVajilla},

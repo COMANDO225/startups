@@ -89,6 +89,7 @@ var recetasDeCurso = map[string]Receta{
 func (p PlatoTipico) Receta() Receta {
 	propia := Receta{
 		Identidad:      p.identidad(),
+		Curso:          p.Curso,
 		Recipiente:     p.Recipiente,
 		Acompanamiento: p.Guarnicion,
 	}

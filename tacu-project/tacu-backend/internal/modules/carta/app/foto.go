@@ -136,7 +136,7 @@ func recetaDePlato(p domain.Plato, tipos []domain.Tipo, base domain.Receta) doma
 	if strings.TrimSpace(r.Fondo) == "" {
 		r.Fondo = fondoPorDefecto
 	}
-	r.Identidad = conLaVariante(r.Identidad, p.Nombre)
+	r.Identidad = conLaVariante(r.Identidad, p.Nombre, r.Curso)
 	return r
 }
 
@@ -148,11 +148,11 @@ func recetaDePlato(p domain.Plato, tipos []domain.Tipo, base domain.Receta) doma
 // Y solo cuando hay identidad: sin banco detras, "Combo Mixto" se llevaria una
 // descripcion de mariscos surtidos sin que nadie sepa si eso es un combo de
 // pollo. La variante MATIZA un plato conocido, no lo inventa.
-func conLaVariante(identidad, nombre string) string {
+func conLaVariante(identidad, nombre, curso string) string {
 	if strings.TrimSpace(identidad) == "" {
 		return identidad
 	}
-	v := domain.VarianteDePlato(nombre)
+	v := domain.VarianteDePlato(nombre, curso)
 	if v == "" {
 		return identidad
 	}

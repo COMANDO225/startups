@@ -33,6 +33,7 @@ import { BarraAccion } from "./BarraAccion";
 import { SubirHojas } from "./SubirHojas";
 import { Aviso } from "./ui/Aviso";
 import { Boton } from "./ui/Boton";
+import { Visor } from "./ui/Visor";
 import { Girador } from "./ui/Girador";
 
 const MAX_PAGINAS = 4;
@@ -308,6 +309,8 @@ function Paginas({
   // La hoja que el dueno acaba de pedir quitar. El aviso se abre con ella y con
   // su cuenta de platos delante, no despues.
   const [quitando, setQuitando] = useState<Pagina | null>(null);
+  /** Que hoja se esta mirando a tamano completo. null = ninguna. */
+  const [mirando, setMirando] = useState<number | null>(null);
   const cliente = useQueryClient();
   const [orden, setOrden] = useState(paginas);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -377,6 +380,17 @@ function Paginas({
 
   return (
     <div className="flex flex-col gap-3">
+      <Visor
+        imagenes={orden.map((p, i) => ({
+          // La GRANDE, que es la que se guarda intacta: de ella lee los precios
+          // la IA, y es justo para leerlos para lo que se abre esto.
+          url: urlMedia(p.url)!,
+          titulo: `Página ${i + 1} de ${orden.length}`,
+        }))}
+        indice={mirando}
+        onIndice={setMirando}
+      />
+
       <div className="flex flex-wrap items-start gap-2.5">
         <Reorder.Group
           axis="x"
@@ -395,6 +409,7 @@ function Paginas({
                 quitando={
                   quitar.isPending && quitar.variables?.clave === pagina.clave
                 }
+                onMirar={() => setMirando(i)}
                 onQuitar={() => setQuitando(pagina)}
                 onSoltar={() => {
                   const claves = orden.map((p) => p.clave);
@@ -407,7 +422,7 @@ function Paginas({
 
         {puedeAnadir && (
           <motion.label
-            className="flex aspect-[3/4] w-[104px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#CFCBC2] bg-surface text-tenue transition-colors hover:border-tinta hover:bg-[#F6F4F0] hover:text-tinta"
+            className="flex aspect-[3/4] w-[132px] lg:w-[168px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#CFCBC2] bg-surface text-tenue transition-colors hover:border-tinta hover:bg-[#F6F4F0] hover:text-tinta"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -603,6 +618,7 @@ function Hoja({
   numero,
   bloqueado,
   quitando,
+  onMirar,
   onQuitar,
   onSoltar,
 }: {
@@ -610,6 +626,7 @@ function Hoja({
   numero: number;
   bloqueado: boolean;
   quitando: boolean;
+  onMirar: () => void;
   onQuitar: () => void;
   onSoltar: () => void;
 }) {
@@ -621,7 +638,7 @@ function Hoja({
   return (
     <Reorder.Item
       as="li"
-      className="group relative aspect-[3/4] w-[104px] shrink-0 overflow-hidden rounded-xl border border-[#E7E5E0] bg-surface-secondary"
+      className="group relative aspect-[3/4] w-[132px] lg:w-[168px] shrink-0 overflow-hidden rounded-xl border border-[#E7E5E0] bg-surface-secondary"
       dragControls={controles}
       dragListener={false}
       exit={{ opacity: 0, scale: 0.9 }}
@@ -641,15 +658,22 @@ function Hoja({
       ) : (
         // Sin next/image: la url es del backend, que en produccion sera otro
         // dominio, y esto son 4 miniaturas que no justifican configurar remotePatterns.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt={`Página ${numero}`}
-          className="size-full object-cover"
-          draggable={false}
-          loading="lazy"
-          src={urlMedia(pagina.url_pequena ?? pagina.url)}
-          onError={caerALaGrande(pagina)}
-        />
+        <button
+          aria-label={`Ver la página ${numero} a tamaño completo`}
+          className="size-full cursor-zoom-in"
+          type="button"
+          onClick={onMirar}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt={`Página ${numero}`}
+            className="size-full object-cover"
+            draggable={false}
+            loading="lazy"
+            src={urlMedia(pagina.url_pequena ?? pagina.url)}
+            onError={caerALaGrande(pagina)}
+          />
+        </button>
       )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 px-2 pb-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]">

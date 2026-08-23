@@ -18,8 +18,8 @@ export function EsqueletoDePaso({ paso }: { paso: Paso | null }) {
 
       {paso === "carta" ? (
         <div className="mt-2 flex gap-2.5">
-          <Barra className="aspect-[3/4] w-[104px] rounded-xl" />
-          <Barra className="aspect-[3/4] w-[104px] rounded-xl" />
+          <Barra className="aspect-[3/4] w-[132px] lg:w-[168px] rounded-xl" />
+          <Barra className="aspect-[3/4] w-[132px] lg:w-[168px] rounded-xl" />
         </div>
       ) : paso === "publicar" ? (
         <div className="mt-2 flex flex-col gap-6 lg:flex-row">

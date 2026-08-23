@@ -140,7 +140,7 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
             <motion.div
               key={`${archivo.name}-${archivo.size}-${i}`}
               animate={{ opacity: 1 }}
-              className="group relative aspect-[3/4] w-[104px] shrink-0 overflow-hidden rounded-xl border border-[#E7E5E0] bg-surface-secondary"
+              className="group relative aspect-[3/4] w-[132px] lg:w-[168px] shrink-0 overflow-hidden rounded-xl border border-[#E7E5E0] bg-surface-secondary"
               exit={{ opacity: 0 }}
               initial={{ opacity: 0 }}
             >
@@ -182,7 +182,7 @@ export function SubirHojas({ idImportacion }: { idImportacion: string }) {
 
         {puedeAnadir && (
           <motion.label
-            className="flex aspect-[3/4] w-[104px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#CFCBC2] bg-surface text-tenue transition-colors hover:border-tinta hover:bg-[#F6F4F0] hover:text-tinta"
+            className="flex aspect-[3/4] w-[132px] lg:w-[168px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#CFCBC2] bg-surface text-tenue transition-colors hover:border-tinta hover:bg-[#F6F4F0] hover:text-tinta"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >

@@ -6,6 +6,7 @@ import { urlMedia } from "@/lib/api";
 import { useFotoDePlato } from "@/lib/hooks";
 import type { Foto, Plato } from "@/lib/tipos";
 import { BotonesDeFoto } from "./BotonesDeFoto";
+import { Visor } from "./ui/Visor";
 import { Aviso } from "./ui/Aviso";
 import { Ficha } from "./ui/Ficha";
 import { PrecioEditable } from "./PrecioEditable";
@@ -28,6 +29,7 @@ export function TarjetaPlato({
   modo?: "marcado" | "fotos";
 }) {
   const [editando, setEditando] = useState(false);
+  const [mirando, setMirando] = useState(false);
 
   // Esta tarjeta se suscribe a SU entrada, no al mapa entero. El `select` de
   // useFotoDePlato es lo que hace la diferencia: sin el, las 74 tarjetas vuelven
@@ -72,7 +74,21 @@ export function TarjetaPlato({
           vuelve un scroll infinito. */}
       {enFotos && (
         <div className="group relative size-[94px] shrink-0 lg:aspect-[4/3] lg:size-auto lg:w-full">
-          <RecuadroFoto foto={foto} nombre={plato.nombre} />
+          <RecuadroFoto
+            foto={foto}
+            nombre={plato.nombre}
+            onMirar={() => setMirando(true)}
+          />
+
+          {/* Montado solo al abrir: con 74 tarjetas en pantalla, 74 <dialog>
+              vacios de mas no le hacen falta a nadie. */}
+          {mirando && foto.url && (
+            <Visor
+              imagenes={[{ url: urlMedia(foto.url)!, titulo: plato.nombre }]}
+              indice={0}
+              onIndice={() => setMirando(false)}
+            />
+          )}
 
           {/* Siempre visible aunque tenue: en movil no hay hover, y un control
               que solo aparece al pasar el raton no existe para medio Peru. */}
@@ -174,7 +190,15 @@ export function TarjetaPlato({
 }
 
 /** Solo PINTA el estado. Las acciones son de BotonesDeFoto. */
-function RecuadroFoto({ foto, nombre }: { foto: Foto; nombre: string }) {
+function RecuadroFoto({
+  foto,
+  nombre,
+  onMirar,
+}: {
+  foto: Foto;
+  nombre: string;
+  onMirar: () => void;
+}) {
   const caja =
     "flex size-full items-center justify-center overflow-hidden rounded-[11px] px-2 text-center text-[11px] leading-[1.3] lg:text-xs";
 
@@ -182,12 +206,20 @@ function RecuadroFoto({ foto, nombre }: { foto: Foto; nombre: string }) {
     case "lista":
       return (
         <div className="relative size-full overflow-hidden rounded-[11px] border border-border">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            alt={nombre}
-            className="size-full object-cover"
-            src={urlMedia(foto.url_media ?? foto.url)}
-          />
+          <button
+            aria-label={`Ver la foto de ${nombre} a tamaño completo`}
+            className="size-full cursor-zoom-in"
+            type="button"
+            onClick={onMirar}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt={nombre}
+              className="size-full object-cover"
+              // La de 640 para la tarjeta; el visor abre la de 1280.
+              src={urlMedia(foto.url_media ?? foto.url)}
+            />
+          </button>
           {foto.origen === "propia" && <Etiqueta>tuya</Etiqueta>}
         </div>
       );

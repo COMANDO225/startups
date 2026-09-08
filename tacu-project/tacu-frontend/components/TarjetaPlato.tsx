@@ -199,13 +199,19 @@ function RecuadroFoto({
   nombre: string;
   onMirar: () => void;
 }) {
+  // absolute inset-0 y NO size-full: el hueco de la foto es `aspect-[4/3]` con
+  // height auto, y un height:100% no resuelve contra una altura automatica. Sin
+  // esto, la foto imponia su alto natural —cuadrado— y el cartel de "Generando"
+  // se encogia hasta su linea de texto, asi que el mismo hueco medía distinto
+  // segun el estado y la tarjeta pegaba un salto al llegar la imagen. Posicionado,
+  // los dos ocupan exactamente la caja.
   const caja =
-    "flex size-full items-center justify-center overflow-hidden rounded-[11px] px-2 text-center text-[11px] leading-[1.3] lg:text-xs";
+    "absolute inset-0 flex items-center justify-center overflow-hidden rounded-[11px] px-2 text-center text-[11px] leading-[1.3] lg:text-xs";
 
   switch (foto.estado) {
     case "lista":
       return (
-        <div className="relative size-full overflow-hidden rounded-[11px] border border-border">
+        <div className="absolute inset-0 overflow-hidden rounded-[11px] border border-border">
           <button
             aria-label={`Ver la foto de ${nombre} a tamaño completo`}
             className="size-full cursor-zoom-in"

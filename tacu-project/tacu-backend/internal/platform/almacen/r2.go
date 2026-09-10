@@ -95,7 +95,15 @@ func EsPublica(clave string) bool {
 	// Dos prefijos publicos, no uno: la foto del local encabeza el catalogo que
 	// se reparte por WhatsApp, igual que las fotos de plato. Lo privado sigue
 	// siendo lo del editor —las hojas de la carta, el estilo, las referencias—.
-	return strings.HasPrefix(clave, "fotos/") || strings.HasPrefix(clave, "portada/")
+	// Lo publico es lo que sale en el catalogo: las fotos de plato, la foto del
+	// local y el logo. El LETRERO no: es la foto de trabajo de la que sale el
+	// logo, y solo la ve el dueno en su editor.
+	for _, publico := range []string{"fotos/", "portada/", "logo/"} {
+		if strings.HasPrefix(clave, publico) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *R2) bucketDe(clave string) string {

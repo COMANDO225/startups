@@ -332,6 +332,34 @@ func (q *Queries) GuardarImagenesDeImportacion(ctx context.Context, arg GuardarI
 	return err
 }
 
+const guardarLetrero = `-- name: GuardarLetrero :exec
+UPDATE restaurante SET letrero_clave = $1 WHERE id = $2
+`
+
+type GuardarLetreroParams struct {
+	LetreroClave  string
+	RestauranteID uuid.UUID
+}
+
+func (q *Queries) GuardarLetrero(ctx context.Context, arg GuardarLetreroParams) error {
+	_, err := q.db.Exec(ctx, guardarLetrero, arg.LetreroClave, arg.RestauranteID)
+	return err
+}
+
+const guardarLogo = `-- name: GuardarLogo :exec
+UPDATE restaurante SET logo_clave = $1 WHERE id = $2
+`
+
+type GuardarLogoParams struct {
+	LogoClave     string
+	RestauranteID uuid.UUID
+}
+
+func (q *Queries) GuardarLogo(ctx context.Context, arg GuardarLogoParams) error {
+	_, err := q.db.Exec(ctx, guardarLogo, arg.LogoClave, arg.RestauranteID)
+	return err
+}
+
 const guardarNombreDeRestaurante = `-- name: GuardarNombreDeRestaurante :exec
 UPDATE restaurante SET nombre = $1 WHERE id = $2
 `
@@ -365,7 +393,9 @@ func (q *Queries) GuardarPortada(ctx context.Context, arg GuardarPortadaParams) 
 
 const importacionPublicadaPorSlug = `-- name: ImportacionPublicadaPorSlug :one
 SELECT i.id, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug,
-       r.portada_clave AS restaurante_portada
+       r.portada_clave AS restaurante_portada,
+       r.logo_clave AS restaurante_logo,
+       r.letrero_clave AS restaurante_letrero
   FROM restaurante r
   JOIN importacion i ON i.id = r.importacion_publicada_id
  WHERE r.slug = $1
@@ -376,6 +406,8 @@ type ImportacionPublicadaPorSlugRow struct {
 	RestauranteNombre  string
 	RestauranteSlug    *string
 	RestaurantePortada string
+	RestauranteLogo    string
+	RestauranteLetrero string
 }
 
 // La carta publica. SIN token: es la que ve el cliente del restaurante.
@@ -390,6 +422,8 @@ func (q *Queries) ImportacionPublicadaPorSlug(ctx context.Context, slug *string)
 		&i.RestauranteNombre,
 		&i.RestauranteSlug,
 		&i.RestaurantePortada,
+		&i.RestauranteLogo,
+		&i.RestauranteLetrero,
 	)
 	return i, err
 }
@@ -526,6 +560,24 @@ func (q *Queries) ListarPlatos(ctx context.Context, importacionID uuid.UUID) ([]
 	return items, nil
 }
 
+const marcaDeRestaurante = `-- name: MarcaDeRestaurante :one
+SELECT logo_clave, letrero_clave FROM restaurante WHERE id = $1
+`
+
+type MarcaDeRestauranteRow struct {
+	LogoClave    string
+	LetreroClave string
+}
+
+// El logo y su fuente. Se leen antes de pisarlos para poder borrar del almacen lo
+// que deja de usarse: sin eso, cada intento deja el anterior pagando sitio.
+func (q *Queries) MarcaDeRestaurante(ctx context.Context, id uuid.UUID) (MarcaDeRestauranteRow, error) {
+	row := q.db.QueryRow(ctx, marcaDeRestaurante, id)
+	var i MarcaDeRestauranteRow
+	err := row.Scan(&i.LogoClave, &i.LetreroClave)
+	return i, err
+}
+
 const marcarEtapa = `-- name: MarcarEtapa :exec
 UPDATE importacion SET etapa = $1, actualizado_at = now() WHERE id = $2
 `
@@ -644,7 +696,9 @@ func (q *Queries) MotivosDeImportacion(ctx context.Context, importacionID uuid.U
 
 const obtenerImportacion = `-- name: ObtenerImportacion :one
 SELECT i.id, i.restaurante_id, i.estado, i.ip, i.imagenes, i.carta_cruda, i.marcas_revisar, i.marcas_confirmar, i.presupuesto_micros, i.reservado_micros, i.gastado_micros, i.error, i.creado_at, i.actualizado_at, i.etapa, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug,
-       r.portada_clave AS restaurante_portada
+       r.portada_clave AS restaurante_portada,
+       r.logo_clave AS restaurante_logo,
+       r.letrero_clave AS restaurante_letrero
   FROM importacion i
   JOIN restaurante r ON r.id = i.restaurante_id
  WHERE i.id = $1
@@ -669,6 +723,8 @@ type ObtenerImportacionRow struct {
 	RestauranteNombre  string
 	RestauranteSlug    *string
 	RestaurantePortada string
+	RestauranteLogo    string
+	RestauranteLetrero string
 }
 
 func (q *Queries) ObtenerImportacion(ctx context.Context, id uuid.UUID) (ObtenerImportacionRow, error) {
@@ -693,6 +749,8 @@ func (q *Queries) ObtenerImportacion(ctx context.Context, id uuid.UUID) (Obtener
 		&i.RestauranteNombre,
 		&i.RestauranteSlug,
 		&i.RestaurantePortada,
+		&i.RestauranteLogo,
+		&i.RestauranteLetrero,
 	)
 	return i, err
 }

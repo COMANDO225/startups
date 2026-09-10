@@ -109,4 +109,6 @@ type Restaurante struct {
 	CreadoAt               pgtype.Timestamptz
 	Tipos                  []byte
 	PortadaClave           string
+	LogoClave              string
+	LetreroClave           string
 }

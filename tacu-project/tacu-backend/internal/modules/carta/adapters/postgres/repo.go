@@ -321,6 +321,8 @@ func (r *Repo) Obtener(ctx context.Context, importacionID id.ID) (domain.Importa
 			Nombre:  fila.RestauranteNombre,
 			Slug:    opcional(fila.RestauranteSlug),
 			Portada: fila.RestaurantePortada,
+			Logo:    fila.RestauranteLogo,
+			Letrero: fila.RestauranteLetrero,
 		},
 		Estado:      domain.Estado(fila.Estado),
 		Etapa:       fila.Etapa,
@@ -603,6 +605,59 @@ func (r *Repo) GuardarPortada(ctx context.Context, restauranteID id.ID, clave st
 		return q.GuardarPortada(ctx, cartadb.GuardarPortadaParams{
 			RestauranteID: restauranteID,
 			PortadaClave:  clave,
+		})
+	})
+	return anterior, err
+}
+
+// MarcaDeRestaurante devuelve el logo y la foto del letrero que hay guardados.
+func (r *Repo) MarcaDeRestaurante(ctx context.Context, restauranteID id.ID) (logo, letrero string, err error) {
+	fila, err := r.q.MarcaDeRestaurante(ctx, restauranteID)
+	if err != nil {
+		if db.SinFilas(err) {
+			return "", "", ErrNoExiste
+		}
+		return "", "", fmt.Errorf("leyendo la marca: %w", err)
+	}
+	return fila.LogoClave, fila.LetreroClave, nil
+}
+
+// GuardarLogo deja el logo que se publica y devuelve la clave del anterior, para
+// que quien llama pueda borrarlo del almacen.
+func (r *Repo) GuardarLogo(ctx context.Context, restauranteID id.ID, clave string) (string, error) {
+	var anterior string
+	err := db.EnTx(ctx, r.pool, func(tx pgx.Tx) error {
+		q := r.q.WithTx(tx)
+		fila, err := q.MarcaDeRestaurante(ctx, restauranteID)
+		if err != nil {
+			if db.SinFilas(err) {
+				return ErrNoExiste
+			}
+			return fmt.Errorf("leyendo la marca: %w", err)
+		}
+		anterior = fila.LogoClave
+		return q.GuardarLogo(ctx, cartadb.GuardarLogoParams{
+			RestauranteID: restauranteID, LogoClave: clave,
+		})
+	})
+	return anterior, err
+}
+
+// GuardarLetrero deja la foto del cartel y devuelve la del anterior.
+func (r *Repo) GuardarLetrero(ctx context.Context, restauranteID id.ID, clave string) (string, error) {
+	var anterior string
+	err := db.EnTx(ctx, r.pool, func(tx pgx.Tx) error {
+		q := r.q.WithTx(tx)
+		fila, err := q.MarcaDeRestaurante(ctx, restauranteID)
+		if err != nil {
+			if db.SinFilas(err) {
+				return ErrNoExiste
+			}
+			return fmt.Errorf("leyendo la marca: %w", err)
+		}
+		anterior = fila.LetreroClave
+		return q.GuardarLetrero(ctx, cartadb.GuardarLetreroParams{
+			RestauranteID: restauranteID, LetreroClave: clave,
 		})
 	})
 	return anterior, err
@@ -961,6 +1016,8 @@ func (r *Repo) CartaPublica(ctx context.Context, slug string) (domain.Importacio
 			Nombre:  fila.RestauranteNombre,
 			Slug:    opcional(fila.RestauranteSlug),
 			Portada: fila.RestaurantePortada,
+			Logo:    fila.RestauranteLogo,
+			Letrero: fila.RestauranteLetrero,
 		},
 	}
 	imp.Carta, err = r.leerCarta(ctx, fila.ID)

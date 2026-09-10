@@ -38,7 +38,9 @@ UPDATE importacion
 
 -- name: ObtenerImportacion :one
 SELECT i.*, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug,
-       r.portada_clave AS restaurante_portada
+       r.portada_clave AS restaurante_portada,
+       r.logo_clave AS restaurante_logo,
+       r.letrero_clave AS restaurante_letrero
   FROM importacion i
   JOIN restaurante r ON r.id = i.restaurante_id
  WHERE i.id = $1;
@@ -235,7 +237,9 @@ SELECT EXISTS (
 -- editando un borrador nuevo no puede cambiar lo que el cliente esta viendo.
 -- name: ImportacionPublicadaPorSlug :one
 SELECT i.id, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug,
-       r.portada_clave AS restaurante_portada
+       r.portada_clave AS restaurante_portada,
+       r.logo_clave AS restaurante_logo,
+       r.letrero_clave AS restaurante_letrero
   FROM restaurante r
   JOIN importacion i ON i.id = r.importacion_publicada_id
  WHERE r.slug = @slug;
@@ -274,3 +278,14 @@ SELECT portada_clave FROM restaurante WHERE id = $1;
 
 -- name: GuardarPortada :exec
 UPDATE restaurante SET portada_clave = @portada_clave WHERE id = @restaurante_id;
+
+-- El logo y su fuente. Se leen antes de pisarlos para poder borrar del almacen lo
+-- que deja de usarse: sin eso, cada intento deja el anterior pagando sitio.
+-- name: MarcaDeRestaurante :one
+SELECT logo_clave, letrero_clave FROM restaurante WHERE id = $1;
+
+-- name: GuardarLogo :exec
+UPDATE restaurante SET logo_clave = @logo_clave WHERE id = @restaurante_id;
+
+-- name: GuardarLetrero :exec
+UPDATE restaurante SET letrero_clave = @letrero_clave WHERE id = @restaurante_id;

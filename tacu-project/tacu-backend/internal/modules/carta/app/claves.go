@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	"tacu-backend/internal/kernel/id"
 	"tacu-backend/internal/platform/imagen"
@@ -38,6 +39,17 @@ func ClaveDePortada(restaurante id.ID) string {
 	return fmt.Sprintf("%sportada/%s", prefijoDe(restaurante), id.Nuevo())
 }
 
+// ClaveDeLogo: el logo del negocio. Publico — va en el catalogo.
+func ClaveDeLogo(restaurante id.ID) string {
+	return fmt.Sprintf("%slogo/%s", prefijoDe(restaurante), id.Nuevo())
+}
+
+// ClaveDeLetrero: la foto del cartel, la fuente del logo. PRIVADA: es material
+// de trabajo, no se publica.
+func ClaveDeLetrero(restaurante id.ID) string {
+	return fmt.Sprintf("%sletrero/%s", prefijoDe(restaurante), id.Nuevo())
+}
+
 // ClaveDeHoja: una hoja de la carta de papel. PRIVADA, y es la que mas importa
 // que lo sea: es el menu del negocio de otro, fotografiado por el.
 //
@@ -69,4 +81,15 @@ func PrefijoDeRestaurante(restaurante id.ID) string {
 // el paquete imagen solo para armar un sufijo.
 func ConVariante(clave string, v imagen.Variante) string {
 	return imagen.ConVariante(clave, v)
+}
+
+// EsDeEsteRestaurante comprueba que una clave que llega DE FUERA pertenece a
+// quien dice.
+//
+// Hace falta donde el cliente manda una clave en vez de un archivo —aceptar un
+// logo que se acaba de proponer—: sin esto, cualquiera con un token podria
+// colgarle a su carta una imagen de otro restaurante con solo escribir su
+// prefijo.
+func EsDeEsteRestaurante(clave string, restaurante id.ID) bool {
+	return clave != "" && strings.HasPrefix(clave, prefijoDe(restaurante))
 }

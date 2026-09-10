@@ -13,15 +13,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"time"
 
 	"tacu-backend/internal/platform/ai"
 )
 
 const (
-	urlChat    = "https://api.openai.com/v1/chat/completions"
-	urlImagen  = "https://api.openai.com/v1/images/generations"
+	urlChat   = "https://api.openai.com/v1/chat/completions"
+	urlImagen = "https://api.openai.com/v1/images/generations"
+
+	// EDITAR y no generar es lo que separa "redibuja ESTE logo" de "invéntate un
+	// logo". Sin este endpoint, la foto de referencia no viaja y el modelo
+	// rellena el hueco con lo que recuerda: pidiendole el logo de una pollería
+	// peruana devolvio "LOS POLLOS HERMANOS" y "TORCHY'S TACOS" —una marca
+	// registrada ajena, con su simbolo (R)— porque nunca vio la foto.
+	urlEdicion = "https://api.openai.com/v1/images/edits"
 	maxCuerpo  = 64 << 20 // las imagenes vuelven en base64 y pesan
 	timeoutDef = 3 * time.Minute
 )
@@ -134,18 +143,6 @@ func (p *Proveedor) completar(ctx context.Context, modelo string, pet ai.Peticio
 // --- generacion de imagenes ---
 
 func (p *Proveedor) generarImagen(ctx context.Context, modelo string, pet ai.Peticion) (ai.Respuesta, error) {
-	cuerpo := map[string]any{
-		"model":  modelo,
-		"prompt": pet.Prompt,
-		"n":      1,
-	}
-	if pet.Tamano != "" {
-		cuerpo["size"] = pet.Tamano
-	}
-	if pet.Calidad != "" {
-		cuerpo["quality"] = pet.Calidad
-	}
-
 	var resp struct {
 		Data []struct {
 			B64 string `json:"b64_json"`
@@ -156,7 +153,23 @@ func (p *Proveedor) generarImagen(ctx context.Context, modelo string, pet ai.Pet
 		} `json:"data"`
 	}
 
-	if err := p.pedir(ctx, urlImagen, cuerpo, &resp); err != nil {
+	// Con referencias se EDITA; sin ellas se genera de cero. Son dos endpoints
+	// distintos y uno de los dos no admite JSON: /images/edits pide multipart
+	// porque los archivos van dentro.
+	var err error
+	if len(pet.Referencias) > 0 {
+		err = p.editarImagen(ctx, modelo, pet, &resp)
+	} else {
+		cuerpo := map[string]any{"model": modelo, "prompt": pet.Prompt, "n": 1}
+		if pet.Tamano != "" {
+			cuerpo["size"] = pet.Tamano
+		}
+		if pet.Calidad != "" {
+			cuerpo["quality"] = pet.Calidad
+		}
+		err = p.pedir(ctx, urlImagen, cuerpo, &resp)
+	}
+	if err != nil {
 		return ai.Respuesta{}, err
 	}
 	if len(resp.Data) == 0 {
@@ -183,18 +196,93 @@ func (p *Proveedor) generarImagen(ctx context.Context, modelo string, pet ai.Pet
 
 // --- transporte ---
 
+// editarImagen manda las referencias a /images/edits, que es multipart.
+//
+// Las referencias van todas bajo el mismo nombre de campo, "image[]": gpt-image-2
+// admite hasta 16 y las usa como el material del que sale el resultado, no como
+// una sugerencia de estilo. Es la diferencia entre redibujar y reinventar.
+func (p *Proveedor) editarImagen(ctx context.Context, modelo string, pet ai.Peticion, destino any) error {
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+
+	campos := [][2]string{{"model", modelo}, {"prompt", pet.Prompt}, {"n", "1"}}
+	if pet.Tamano != "" {
+		campos = append(campos, [2]string{"size", pet.Tamano})
+	}
+	if pet.Calidad != "" {
+		campos = append(campos, [2]string{"quality", pet.Calidad})
+	}
+	for _, c := range campos {
+		if err := w.WriteField(c[0], c[1]); err != nil {
+			return ai.Terminal(p.Nombre(), "peticion_invalida", err.Error(), err)
+		}
+	}
+
+	for i, ref := range pet.Referencias {
+		// CreateFormFile pone application/octet-stream y OpenAI lo rechaza con
+		// "unsupported mimetype". El tipo real hay que escribirlo a mano.
+		cab := make(textproto.MIMEHeader)
+		cab.Set("Content-Disposition",
+			fmt.Sprintf(`form-data; name="image[]"; filename="ref-%d%s"`, i, extensionDe(ref.MIME)))
+		cab.Set("Content-Type", tipoValido(ref.MIME))
+
+		parte, err := w.CreatePart(cab)
+		if err != nil {
+			return ai.Terminal(p.Nombre(), "peticion_invalida", err.Error(), err)
+		}
+		if _, err := parte.Write(ref.Bytes); err != nil {
+			return ai.Terminal(p.Nombre(), "peticion_invalida", err.Error(), err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		return ai.Terminal(p.Nombre(), "peticion_invalida", err.Error(), err)
+	}
+
+	return p.enviar(ctx, urlEdicion, w.FormDataContentType(), buf.Bytes(), destino)
+}
+
+// extensionDe: el multipart de OpenAI mira el nombre del archivo para saber el
+// formato. Sin extension rechaza la peticion.
+func extensionDe(mime string) string {
+	switch tipoValido(mime) {
+	case "image/png":
+		return ".png"
+	case "image/webp":
+		return ".webp"
+	}
+	return ".jpg"
+}
+
+// tipoValido acota a lo que OpenAI acepta. Un MIME raro —o el que se saco de
+// olfatear los bytes— cae a jpeg, que es lo que sale de la camara de un
+// telefono.
+func tipoValido(mime string) string {
+	switch mime {
+	case "image/png", "image/webp", "image/jpeg":
+		return mime
+	}
+	return "image/jpeg"
+}
+
 func (p *Proveedor) pedir(ctx context.Context, url string, cuerpo any, destino any) error {
 	datos, err := json.Marshal(cuerpo)
 	if err != nil {
 		return ai.Terminal(p.Nombre(), "peticion_invalida", "no se pudo serializar la peticion", err)
 	}
 
+	return p.enviar(ctx, url, "application/json", datos, destino)
+}
+
+// enviar es lo que comparten la peticion JSON y la multipart: cabeceras, limites
+// de lectura y la MISMA clasificacion de errores. Sin compartirla, un 429 en el
+// camino de edicion no cortaria la cadena de modelos como corta en el otro.
+func (p *Proveedor) enviar(ctx context.Context, url, tipo string, datos []byte, destino any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(datos))
 	if err != nil {
 		return ai.Terminal(p.Nombre(), "peticion_invalida", err.Error(), err)
 	}
 	req.Header.Set("Authorization", "Bearer "+p.clave)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", tipo)
 
 	res, err := p.http.Do(req)
 	if err != nil {

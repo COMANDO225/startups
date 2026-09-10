@@ -66,6 +66,7 @@ type Handler struct {
 	referencias GestorDeReferencias
 	paginas     GestorDePaginas
 	portada     GestorDePortada
+	logo        GestorDeLogo
 	reconocedor Reconocedor
 	publicador  Publicador
 	repo        Guardador
@@ -87,14 +88,14 @@ type Handler struct {
 
 func NuevoHandler(importar *app.Importar, lector Lector, encolador Encolador,
 	fotos GeneradorDeFotos, editar EditorDePlato, negocio Negocio, estilo Estilista,
-	referencias GestorDeReferencias, paginas GestorDePaginas, portada GestorDePortada,
+	referencias GestorDeReferencias, paginas GestorDePaginas, portada GestorDePortada, logo GestorDeLogo,
 	reconocedor Reconocedor,
 	publicador Publicador, repo Guardador, url URLDeClave,
 	log *slog.Logger, sincrono bool, maxSubidaMB int, porFotoUSD float64) *Handler {
 	return &Handler{
 		importar: importar, lector: lector, encolador: encolador,
 		fotos: fotos, editar: editar, negocio: negocio, estilo: estilo, referencias: referencias,
-		paginas: paginas, portada: portada, reconocedor: reconocedor, publicador: publicador,
+		paginas: paginas, portada: portada, logo: logo, reconocedor: reconocedor, publicador: publicador,
 		repo: repo, url: url, log: log,
 		sincrono: sincrono, maxSubidaBytes: int64(maxSubidaMB) * 1024 * 1024,
 		porFotoUSD: porFotoUSD,
@@ -120,6 +121,7 @@ func (h *Handler) Montar(r fiber.Router) {
 	h.montarReferencias(r)
 	h.montarPaginas(r)
 	h.montarPortada(r)
+	h.montarLogo(r)
 	h.montarReconocer(r)
 	h.montarPublicar(r)
 }
@@ -487,6 +489,8 @@ func traducirError(c fiber.Ctx, err error) error {
 		errors.Is(err, app.ErrRanuraDesconocida),
 		errors.Is(err, app.ErrEtiquetaLarga),
 		errors.Is(err, app.ErrPrecioInvalido),
+		errors.Is(err, app.ErrImagenAjena),
+		errors.Is(err, app.ErrSinLetrero),
 		errors.Is(err, app.ErrPaginaDesconocida):
 		return problema(c, http.StatusBadRequest, err.Error(), "")
 	}

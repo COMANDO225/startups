@@ -71,6 +71,16 @@ type Restaurante struct {
 	// Vacia = el catalogo sale con el nombre en texto, que es como salia antes
 	// de que esto existiera y sigue siendo una salida digna.
 	Portada string
+
+	// Logo es la CLAVE del logo que se publica, venga de un archivo del dueno o
+	// de redibujar su letrero.
+	Logo string
+
+	// Letrero es la CLAVE de la foto del cartel: la FUENTE del logo, no el logo.
+	// Se guarda para poder redibujar otra vez sin pedir otra foto y para
+	// ensenarla al lado del resultado, que es lo que deja al dueno comparar
+	// antes de quedarse con nada.
+	Letrero string
 }
 
 // PuedePublicarse dice si la carta esta lista para salir a la calle.

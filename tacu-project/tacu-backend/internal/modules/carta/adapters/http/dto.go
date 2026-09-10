@@ -37,6 +37,13 @@ type RestauranteDTO struct {
 	// Portada vacia = el catalogo sale con el nombre en texto, que es como salia
 	// antes de que esto existiera.
 	Portada PortadaDTO `json:"portada"`
+
+	Logo LogoDTO `json:"logo"`
+
+	// Letrero es la FUENTE del logo, no el logo. Viaja para que el editor pueda
+	// ensenarla al lado del redibujo: sin poder comparar, aceptar es a ciegas.
+	// No sale en el catalogo publico.
+	Letrero LogoDTO `json:"letrero,omitempty"`
 }
 
 type ImportacionDTO struct {
@@ -228,6 +235,8 @@ func aImportacionDTO(imp domain.Importacion, url URLDeClave, porFoto float64) Im
 			Nombre:  imp.Restaurante.Nombre,
 			Slug:    imp.Restaurante.Slug,
 			Portada: aPortadaDTO(imp.Restaurante.Portada, url),
+			Logo:    aLogoDTO(imp.Restaurante.Logo, url),
+			Letrero: aLogoDTO(imp.Restaurante.Letrero, url),
 		},
 		Error:  imp.Error,
 		Marcas: MarcasDTO{Revisar: imp.Marcas.Revisar, Confirmar: imp.Marcas.Confirmar},
@@ -348,6 +357,7 @@ func aCartaPublicaDTO(imp domain.Importacion, url URLDeClave) CartaPublicaDTO {
 			Nombre:  imp.Restaurante.Nombre,
 			Slug:    imp.Restaurante.Slug,
 			Portada: aPortadaDTO(imp.Restaurante.Portada, url),
+			Logo:    aLogoDTO(imp.Restaurante.Logo, url),
 		},
 		Categorias: make([]CategoriaPublicaDTO, 0, len(imp.Carta.Categorias)),
 	}

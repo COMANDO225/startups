@@ -276,6 +276,35 @@ func (g *GeneradorIA) Pintar(ctx context.Context, prompt string) ([]byte, string
 	return resp.Imagenes[0].Bytes, resp.Imagenes[0].MIME, nil
 }
 
+// Redibujar saca un logo limpio de la foto de un letrero.
+//
+// Va por la tarea GenerarLogo y no por GenerarFoto: son modelos distintos por
+// decision medida —"solo OpenAI: es el que probamos y el que mejor redibuja"— y
+// pedirlos por tarea es lo que deja cambiarlos desde el YAML.
+//
+// La foto va como REFERENCIA, y eso es lo unico que separa redibujar de
+// inventar: sin ella el generador rellena el hueco con un logo famoso que
+// recuerda. Medido: devolvio "LOS POLLOS HERMANOS" y "TORCHY'S TACOS".
+//
+// medium 1024x1024 esta MEDIDO contra low con cmd/logocheck: low saca el texto
+// limpio pero deforma la mascota, que es la parte que hace reconocible un logo.
+func (g *GeneradorIA) Redibujar(ctx context.Context, prompt string, letrero []byte) ([]byte, string, error) {
+	resp, err := g.ia.Ejecutar(ctx, ai.Peticion{
+		Tarea:       ai.GenerarLogo,
+		Prompt:      prompt,
+		Referencias: []ai.Imagen{{Bytes: letrero, MIME: "image/webp"}},
+		Tamano:      "1024x1024",
+		Calidad:     "medium",
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	if len(resp.Imagenes) == 0 {
+		return nil, "", errSinImagen
+	}
+	return resp.Imagenes[0].Bytes, resp.Imagenes[0].MIME, nil
+}
+
 func (g *GeneradorIA) Ejecutar(ctx context.Context, e domain.EncargoDeFoto) (ai.Imagen, ai.Uso, error) {
 	prompt, claves := app.PromptFoto(e.Plato, e.Tipos, e.Base),
 		app.Referencias(e.Plato, e.Tipos, e.Base)

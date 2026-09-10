@@ -211,7 +211,7 @@ func montar(t *testing.T, sincrono bool, lector *lectorFalso) *entorno {
 	h := NuevoHandler(
 		app.NuevoImportar(repo, disco, dinero.USD(3.00)),
 		lector, cola, &fotosFalsas{}, &editorFalso{}, &negocioFalso{}, &estiloFalso{}, &referenciasFalsas{},
-		paginas, &portadaFalsa{}, &reconocedorFalso{}, publicador,
+		paginas, &portadaFalsa{}, &logoFalso{}, &reconocedorFalso{}, publicador,
 		repo, disco.URL,
 		slog.New(slog.DiscardHandler),
 		sincrono, 10, 0.0336,
@@ -345,6 +345,16 @@ type portadaFalsa struct{}
 
 func (portadaFalsa) Poner(context.Context, id.ID, []byte) (string, error) { return "", nil }
 func (portadaFalsa) Quitar(context.Context, id.ID) error                  { return nil }
+
+// logoFalso no dibuja nada: los tests del borde de importaciones no tocan la
+// marca del negocio.
+type logoFalso struct{}
+
+func (logoFalso) Poner(context.Context, id.ID, []byte) (string, error)        { return "", nil }
+func (logoFalso) Aceptar(context.Context, id.ID, string) error                { return nil }
+func (logoFalso) SubirLetrero(context.Context, id.ID, []byte) (string, error) { return "", nil }
+func (logoFalso) Redibujar(context.Context, id.ID) (string, error)            { return "", nil }
+func (logoFalso) Quitar(context.Context, id.ID) error                         { return nil }
 
 // encoladorFalso registra lo que se encolo, sin cola de verdad.
 type encoladorFalso struct {

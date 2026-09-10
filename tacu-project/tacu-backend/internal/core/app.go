@@ -108,10 +108,16 @@ func (e encolador) EncolarFotos(ctx context.Context, tx pgx.Tx, importacionID id
 // Falla el arranque si no lo encuentra, y es deliberado: sin precio, la reserva
 // de presupuesto seria cero y el tope de $3.00 no frenaria nada. Es mejor no
 // arrancar que arrancar con el freno desconectado.
-func costoDeUnaFoto(cfg config.IA) (dinero.MicrosUSD, error) {
-	cadena := cfg.Tareas[string(ai.GenerarFoto)]
+// costoDeUnaImagen saca del YAML lo que cuesta la tarea que se le pida.
+//
+// Generalizada desde costoDeUnaFoto porque ya son dos las tareas que generan
+// imagenes y cobran: las fotos de plato y el redibujo del logo, con modelos y
+// precios distintos. Cobrar el logo al precio de una foto pondria el
+// presupuesto a mentir.
+func costoDeUnaImagen(cfg config.IA, tarea ai.Tarea) (dinero.MicrosUSD, error) {
+	cadena := cfg.Tareas[string(tarea)]
 	if len(cadena) == 0 {
-		return 0, errors.New("la tarea generar_foto no tiene modelos configurados")
+		return 0, fmt.Errorf("la tarea %s no tiene modelos configurados", tarea)
 	}
 	precio, ok := cfg.Precios[cadena[0]]
 	if !ok || precio.PorImagen <= 0 {
@@ -170,7 +176,7 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	// corta y el presupuesto se pasa un poco. Se acepta: el respaldo solo entra
 	// cuando el principal falla, o sea en pocas fotos, y sobrestimar siempre
 	// significaria generar menos fotos de las que caben.
-	costoFoto, err := costoDeUnaFoto(cfg.IA)
+	costoFoto, err := costoDeUnaImagen(cfg.IA, ai.GenerarFoto)
 	if err != nil {
 		pool.Close()
 		return nil, err
@@ -210,6 +216,14 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	referencias := app.NuevasReferencias(repo, alm)
 	paginas := app.NuevasPaginas(repo, alm)
 	portada := app.NuevaPortada(repo, alm)
+	// El logo cuesta lo suyo, no lo que cuesta una foto: otro proveedor y otro
+	// precio. Se cobra del MISMO presupuesto de la carta.
+	costoLogo, err := costoDeUnaImagen(cfg.IA, ai.GenerarLogo)
+	if err != nil {
+		pool.Close()
+		return nil, err
+	}
+	logo := app.NuevoLogo(repo, alm, worker.NuevoGeneradorIA(ia, alm, log), costoLogo)
 	publicar := app.NuevoPublicar(repo)
 
 	// Las imagenes privadas se autorizan por su URL, porque un <img src> no manda
@@ -224,7 +238,7 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 
 	handler := cartahttp.NuevoHandler(
 		importar, lector, encolador{cola, log}, fotos, editar, repo, estilo, referencias, paginas,
-		portada, conocedor, publicar, repo, firmante.Envolver(alm.URL), log,
+		portada, logo, conocedor, publicar, repo, firmante.Envolver(alm.URL), log,
 		cfg.Servidor.LeerCartaSincrono, cfg.Servidor.TamanoMaxSubidaMB, costoFoto.Dolares(),
 	)
 

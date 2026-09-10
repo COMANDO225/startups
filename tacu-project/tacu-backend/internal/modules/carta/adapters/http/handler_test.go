@@ -211,7 +211,7 @@ func montar(t *testing.T, sincrono bool, lector *lectorFalso) *entorno {
 	h := NuevoHandler(
 		app.NuevoImportar(repo, disco, dinero.USD(3.00)),
 		lector, cola, &fotosFalsas{}, &editorFalso{}, &negocioFalso{}, &estiloFalso{}, &referenciasFalsas{},
-		paginas, &reconocedorFalso{}, publicador,
+		paginas, &portadaFalsa{}, &reconocedorFalso{}, publicador,
 		repo, disco.URL,
 		slog.New(slog.DiscardHandler),
 		sincrono, 10, 0.0336,
@@ -338,6 +338,13 @@ func (*publicadorFalso) Ejecutar(context.Context, id.ID) (string, error) { retur
 func (p *publicadorFalso) Carta(context.Context, string) (domain.Importacion, error) {
 	return p.carta, nil
 }
+
+// portadaFalsa no guarda nada: los tests del borde de importaciones no tocan la
+// foto del local.
+type portadaFalsa struct{}
+
+func (portadaFalsa) Poner(context.Context, id.ID, []byte) (string, error) { return "", nil }
+func (portadaFalsa) Quitar(context.Context, id.ID) error                  { return nil }
 
 // encoladorFalso registra lo que se encolo, sin cola de verdad.
 type encoladorFalso struct {

@@ -317,9 +317,10 @@ func (r *Repo) Obtener(ctx context.Context, importacionID id.ID) (domain.Importa
 	imp := domain.Importacion{
 		ID: fila.ID,
 		Restaurante: domain.Restaurante{
-			ID:     fila.RestauranteID,
-			Nombre: fila.RestauranteNombre,
-			Slug:   opcional(fila.RestauranteSlug),
+			ID:      fila.RestauranteID,
+			Nombre:  fila.RestauranteNombre,
+			Slug:    opcional(fila.RestauranteSlug),
+			Portada: fila.RestaurantePortada,
 		},
 		Estado:      domain.Estado(fila.Estado),
 		Etapa:       fila.Etapa,
@@ -577,6 +578,34 @@ func (r *Repo) ReclamarFoto(ctx context.Context, platoID, importacionID id.ID) (
 		return nil
 	})
 	return encargo, mio, err
+}
+
+// GuardarPortada deja la foto del local y devuelve la clave de la que habia.
+//
+// Devuelve la anterior porque el almacen no se limpia solo: sin borrarla, cada
+// portada nueva deja la vieja pagando sitio en el bucket para siempre. Quien
+// llama la borra DESPUES de que la fila esta escrita, que es el orden que no
+// deja al catalogo apuntando a un archivo que ya no esta.
+func (r *Repo) GuardarPortada(ctx context.Context, restauranteID id.ID, clave string) (string, error) {
+	var anterior string
+	err := db.EnTx(ctx, r.pool, func(tx pgx.Tx) error {
+		q := r.q.WithTx(tx)
+
+		previa, err := q.PortadaDeRestaurante(ctx, restauranteID)
+		if err != nil {
+			if db.SinFilas(err) {
+				return ErrNoExiste
+			}
+			return fmt.Errorf("leyendo la portada: %w", err)
+		}
+		anterior = previa
+
+		return q.GuardarPortada(ctx, cartadb.GuardarPortadaParams{
+			RestauranteID: restauranteID,
+			PortadaClave:  clave,
+		})
+	})
+	return anterior, err
 }
 
 // tipicoDePlato trae lo que el banco sabe de ESTE plato. Sin clave emparejada
@@ -929,8 +958,9 @@ func (r *Repo) CartaPublica(ctx context.Context, slug string) (domain.Importacio
 		ID:     fila.ID,
 		Estado: domain.Publicada,
 		Restaurante: domain.Restaurante{
-			Nombre: fila.RestauranteNombre,
-			Slug:   opcional(fila.RestauranteSlug),
+			Nombre:  fila.RestauranteNombre,
+			Slug:    opcional(fila.RestauranteSlug),
+			Portada: fila.RestaurantePortada,
 		},
 	}
 	imp.Carta, err = r.leerCarta(ctx, fila.ID)

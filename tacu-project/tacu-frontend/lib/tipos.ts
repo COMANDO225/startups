@@ -156,6 +156,16 @@ export type Pagina = {
 export type Restaurante = {
   nombre: string;
   slug?: string;
+  /** La foto del local, la que encabeza el catalogo. Vacia = solo el nombre. */
+  portada: Portada;
+};
+
+/** Los tres tamanos de la portada. Como en las fotos de plato: la grande para el
+ *  catalogo, la media para la vista previa, la pequena para el editor. */
+export type Portada = {
+  url?: string;
+  url_media?: string;
+  url_pequena?: string;
 };
 
 export type Gasto = {

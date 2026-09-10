@@ -108,4 +108,5 @@ type Restaurante struct {
 	ImportacionPublicadaID *uuid.UUID
 	CreadoAt               pgtype.Timestamptz
 	Tipos                  []byte
+	PortadaClave           string
 }

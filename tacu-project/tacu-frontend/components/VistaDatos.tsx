@@ -6,6 +6,7 @@ import { Description, Input, Label, TextField } from "@heroui/react";
 import { guardarNombre } from "@/lib/api";
 import type { Importacion } from "@/lib/tipos";
 import { BarraAccion } from "./BarraAccion";
+import { PortadaDelLocal } from "./PortadaDelLocal";
 import { SelectorDeTipos } from "./SelectorDeTipos";
 import { Boton } from "./ui/Boton";
 
@@ -68,6 +69,11 @@ export function VistaDatos({
       </TextField>
 
       <SelectorDeTipos idImportacion={importacion.id} />
+
+      <PortadaDelLocal
+        idImportacion={importacion.id}
+        portada={importacion.restaurante.portada}
+      />
 
       {/* En telefono el CTA vive en la barra de abajo, no aqui. */}
       <div className="hidden lg:block">

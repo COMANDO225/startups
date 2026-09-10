@@ -92,7 +92,10 @@ func EsPublica(clave string) bool {
 			clave = tras
 		}
 	}
-	return strings.HasPrefix(clave, "fotos/")
+	// Dos prefijos publicos, no uno: la foto del local encabeza el catalogo que
+	// se reparte por WhatsApp, igual que las fotos de plato. Lo privado sigue
+	// siendo lo del editor —las hojas de la carta, el estilo, las referencias—.
+	return strings.HasPrefix(clave, "fotos/") || strings.HasPrefix(clave, "portada/")
 }
 
 func (r *R2) bucketDe(clave string) string {

@@ -51,6 +51,19 @@ export default async function CartaPublica({ params }: PageProps<"/r/[slug]">) {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-6">
+      {/* La foto del local, si la hay. Sangra hasta los bordes del movil: es lo
+          primero que se ve al abrir el enlace y ahi es donde el catalogo deja de
+          parecer una plantilla. Sin ella, el nombre solo, como siempre. */}
+      {carta.restaurante.portada?.url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt={carta.restaurante.nombre}
+          className="-mx-4 mb-4 aspect-[16/10] w-[calc(100%+2rem)] object-cover sm:mx-0 sm:w-full sm:rounded-2xl"
+          // La grande: es la unica imagen a todo el ancho de la pantalla.
+          src={`${API}${carta.restaurante.portada.url}`}
+        />
+      )}
+
       <h1 className="text-2xl font-semibold">{carta.restaurante.nombre}</h1>
 
       {carta.categorias.map((categoria) => (

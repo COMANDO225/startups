@@ -349,17 +349,33 @@ func (q *Queries) GuardarNombreDeRestaurante(ctx context.Context, arg GuardarNom
 	return err
 }
 
+const guardarPortada = `-- name: GuardarPortada :exec
+UPDATE restaurante SET portada_clave = $1 WHERE id = $2
+`
+
+type GuardarPortadaParams struct {
+	PortadaClave  string
+	RestauranteID uuid.UUID
+}
+
+func (q *Queries) GuardarPortada(ctx context.Context, arg GuardarPortadaParams) error {
+	_, err := q.db.Exec(ctx, guardarPortada, arg.PortadaClave, arg.RestauranteID)
+	return err
+}
+
 const importacionPublicadaPorSlug = `-- name: ImportacionPublicadaPorSlug :one
-SELECT i.id, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug
+SELECT i.id, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug,
+       r.portada_clave AS restaurante_portada
   FROM restaurante r
   JOIN importacion i ON i.id = r.importacion_publicada_id
  WHERE r.slug = $1
 `
 
 type ImportacionPublicadaPorSlugRow struct {
-	ID                uuid.UUID
-	RestauranteNombre string
-	RestauranteSlug   *string
+	ID                 uuid.UUID
+	RestauranteNombre  string
+	RestauranteSlug    *string
+	RestaurantePortada string
 }
 
 // La carta publica. SIN token: es la que ve el cliente del restaurante.
@@ -369,7 +385,12 @@ type ImportacionPublicadaPorSlugRow struct {
 func (q *Queries) ImportacionPublicadaPorSlug(ctx context.Context, slug *string) (ImportacionPublicadaPorSlugRow, error) {
 	row := q.db.QueryRow(ctx, importacionPublicadaPorSlug, slug)
 	var i ImportacionPublicadaPorSlugRow
-	err := row.Scan(&i.ID, &i.RestauranteNombre, &i.RestauranteSlug)
+	err := row.Scan(
+		&i.ID,
+		&i.RestauranteNombre,
+		&i.RestauranteSlug,
+		&i.RestaurantePortada,
+	)
 	return i, err
 }
 
@@ -622,30 +643,32 @@ func (q *Queries) MotivosDeImportacion(ctx context.Context, importacionID uuid.U
 }
 
 const obtenerImportacion = `-- name: ObtenerImportacion :one
-SELECT i.id, i.restaurante_id, i.estado, i.ip, i.imagenes, i.carta_cruda, i.marcas_revisar, i.marcas_confirmar, i.presupuesto_micros, i.reservado_micros, i.gastado_micros, i.error, i.creado_at, i.actualizado_at, i.etapa, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug
+SELECT i.id, i.restaurante_id, i.estado, i.ip, i.imagenes, i.carta_cruda, i.marcas_revisar, i.marcas_confirmar, i.presupuesto_micros, i.reservado_micros, i.gastado_micros, i.error, i.creado_at, i.actualizado_at, i.etapa, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug,
+       r.portada_clave AS restaurante_portada
   FROM importacion i
   JOIN restaurante r ON r.id = i.restaurante_id
  WHERE i.id = $1
 `
 
 type ObtenerImportacionRow struct {
-	ID                uuid.UUID
-	RestauranteID     uuid.UUID
-	Estado            string
-	Ip                *netip.Addr
-	Imagenes          []byte
-	CartaCruda        []byte
-	MarcasRevisar     int32
-	MarcasConfirmar   int32
-	PresupuestoMicros int64
-	ReservadoMicros   int64
-	GastadoMicros     int64
-	Error             string
-	CreadoAt          pgtype.Timestamptz
-	ActualizadoAt     pgtype.Timestamptz
-	Etapa             int16
-	RestauranteNombre string
-	RestauranteSlug   *string
+	ID                 uuid.UUID
+	RestauranteID      uuid.UUID
+	Estado             string
+	Ip                 *netip.Addr
+	Imagenes           []byte
+	CartaCruda         []byte
+	MarcasRevisar      int32
+	MarcasConfirmar    int32
+	PresupuestoMicros  int64
+	ReservadoMicros    int64
+	GastadoMicros      int64
+	Error              string
+	CreadoAt           pgtype.Timestamptz
+	ActualizadoAt      pgtype.Timestamptz
+	Etapa              int16
+	RestauranteNombre  string
+	RestauranteSlug    *string
+	RestaurantePortada string
 }
 
 func (q *Queries) ObtenerImportacion(ctx context.Context, id uuid.UUID) (ObtenerImportacionRow, error) {
@@ -669,6 +692,7 @@ func (q *Queries) ObtenerImportacion(ctx context.Context, id uuid.UUID) (Obtener
 		&i.Etapa,
 		&i.RestauranteNombre,
 		&i.RestauranteSlug,
+		&i.RestaurantePortada,
 	)
 	return i, err
 }
@@ -773,6 +797,20 @@ func (q *Queries) PlatosParaReconciliar(ctx context.Context, importacionID uuid.
 		return nil, err
 	}
 	return items, nil
+}
+
+const portadaDeRestaurante = `-- name: PortadaDeRestaurante :one
+SELECT portada_clave FROM restaurante WHERE id = $1
+`
+
+// La foto del local que encabeza el catalogo. Se lee la anterior antes de pisarla
+// para poder borrarla del almacen: sin eso, cada portada nueva deja la vieja
+// pagando sitio en el bucket para siempre.
+func (q *Queries) PortadaDeRestaurante(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, portadaDeRestaurante, id)
+	var portada_clave string
+	err := row.Scan(&portada_clave)
+	return portada_clave, err
 }
 
 const publicarImportacion = `-- name: PublicarImportacion :exec

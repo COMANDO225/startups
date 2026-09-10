@@ -6,6 +6,7 @@ import type {
   Importacion,
   ImportacionCreada,
   Pagina,
+  Portada,
   PlatoEditado,
   Publicada,
   Referencias,
@@ -391,6 +392,33 @@ export function editarPrecios(
     token: conToken(idImportacion),
     body: JSON.stringify({ etiquetas, importes }),
     headers: { "Content-Type": "application/json" },
+  });
+}
+
+/**
+ * La foto del local, la que encabeza el catalogo publico.
+ *
+ * Cuelga de la importacion en la ruta porque es su token el que autoriza, pero
+ * se guarda en el restaurante: es identidad del negocio, no contenido de una
+ * carta, asi que releer o republicar no se la lleva por delante.
+ */
+export function ponerPortada(
+  idImportacion: string,
+  foto: File,
+): Promise<Portada> {
+  const cuerpo = new FormData();
+  cuerpo.set("foto", foto);
+  return pedir(`/v1/importaciones/${idImportacion}/portada`, {
+    method: "POST",
+    token: conToken(idImportacion),
+    body: cuerpo,
+  });
+}
+
+export function quitarPortada(idImportacion: string): Promise<void> {
+  return pedir(`/v1/importaciones/${idImportacion}/portada`, {
+    method: "DELETE",
+    token: conToken(idImportacion),
   });
 }
 

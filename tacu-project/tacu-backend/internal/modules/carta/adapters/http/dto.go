@@ -33,6 +33,10 @@ type BorradorDTO struct {
 type RestauranteDTO struct {
 	Nombre string `json:"nombre"`
 	Slug   string `json:"slug,omitempty"`
+
+	// Portada vacia = el catalogo sale con el nombre en texto, que es como salia
+	// antes de que esto existiera.
+	Portada PortadaDTO `json:"portada"`
 }
 
 type ImportacionDTO struct {
@@ -62,6 +66,29 @@ type ImportacionDTO struct {
 	// PuedePublicarse resume la regla en un booleano para que el frontend no
 	// tenga que reimplementarla y desincronizarse con el servidor.
 	PuedePublicarse bool `json:"puede_publicarse"`
+}
+
+// PortadaDTO es la foto del local en sus tamanos.
+//
+// Van los tres y no solo el grande por lo mismo que en las fotos de plato: como
+// se llama cada variante lo sabe imagen.ConVariante y nadie mas. Con la regla
+// repetida en TypeScript, el dia que cambie el sufijo el catalogo pediria claves
+// que nadie escribio y fallaria como una imagen rota.
+type PortadaDTO struct {
+	URL        string `json:"url,omitempty"`
+	URLMedia   string `json:"url_media,omitempty"`
+	URLPequena string `json:"url_pequena,omitempty"`
+}
+
+func aPortadaDTO(clave string, url URLDeClave) PortadaDTO {
+	if clave == "" {
+		return PortadaDTO{}
+	}
+	return PortadaDTO{
+		URL:        url(clave),
+		URLMedia:   url(imagen.ConVariante(clave, imagen.Media)),
+		URLPequena: url(imagen.ConVariante(clave, imagen.Pequena)),
+	}
 }
 
 type MarcasDTO struct {
@@ -198,8 +225,9 @@ func aImportacionDTO(imp domain.Importacion, url URLDeClave, porFoto float64) Im
 		Estado: string(imp.Estado),
 		Etapa:  imp.Etapa,
 		Restaurante: RestauranteDTO{
-			Nombre: imp.Restaurante.Nombre,
-			Slug:   imp.Restaurante.Slug,
+			Nombre:  imp.Restaurante.Nombre,
+			Slug:    imp.Restaurante.Slug,
+			Portada: aPortadaDTO(imp.Restaurante.Portada, url),
 		},
 		Error:  imp.Error,
 		Marcas: MarcasDTO{Revisar: imp.Marcas.Revisar, Confirmar: imp.Marcas.Confirmar},
@@ -316,8 +344,12 @@ type FotoPublicaDTO struct {
 
 func aCartaPublicaDTO(imp domain.Importacion, url URLDeClave) CartaPublicaDTO {
 	dto := CartaPublicaDTO{
-		Restaurante: RestauranteDTO{Nombre: imp.Restaurante.Nombre, Slug: imp.Restaurante.Slug},
-		Categorias:  make([]CategoriaPublicaDTO, 0, len(imp.Carta.Categorias)),
+		Restaurante: RestauranteDTO{
+			Nombre:  imp.Restaurante.Nombre,
+			Slug:    imp.Restaurante.Slug,
+			Portada: aPortadaDTO(imp.Restaurante.Portada, url),
+		},
+		Categorias: make([]CategoriaPublicaDTO, 0, len(imp.Carta.Categorias)),
 	}
 
 	for _, cat := range imp.Carta.Categorias {

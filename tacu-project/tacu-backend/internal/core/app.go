@@ -209,6 +209,7 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	editar := app.NuevoEditar(repo)
 	referencias := app.NuevasReferencias(repo, alm)
 	paginas := app.NuevasPaginas(repo, alm)
+	portada := app.NuevaPortada(repo, alm)
 	publicar := app.NuevoPublicar(repo)
 
 	// Las imagenes privadas se autorizan por su URL, porque un <img src> no manda
@@ -223,7 +224,7 @@ func Armar(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 
 	handler := cartahttp.NuevoHandler(
 		importar, lector, encolador{cola, log}, fotos, editar, repo, estilo, referencias, paginas,
-		conocedor, publicar, repo, firmante.Envolver(alm.URL), log,
+		portada, conocedor, publicar, repo, firmante.Envolver(alm.URL), log,
 		cfg.Servidor.LeerCartaSincrono, cfg.Servidor.TamanoMaxSubidaMB, costoFoto.Dolares(),
 	)
 

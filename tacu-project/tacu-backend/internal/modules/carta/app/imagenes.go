@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 
+	"tacu-backend/internal/kernel/id"
 	"tacu-backend/internal/platform/imagen"
 )
 
@@ -79,6 +80,16 @@ func MiniaturaDeHoja(clave string) string {
 // claves son nuevas en cada escritura —a proposito, por la cache del navegador—
 // asi que nada las pisa. En disco no se nota; en R2 es almacenamiento que solo
 // crece y se paga todos los meses.
+// GuardarPortada normaliza la foto del local y la deja en sus tres tamanos.
+//
+// Las mismas variantes que una foto de plato y por el mismo motivo: la portada se
+// abre en un telefono con datos moviles, y servir la grande donde cabe la
+// pequena es lo que convertia el catalogo en 11 MB.
+func GuardarPortada(ctx context.Context, alm AlmacenDeImagenes, restaurante id.ID,
+	bytes []byte) (string, error) {
+	return GuardarFoto(ctx, alm, ClaveDePortada(restaurante), bytes)
+}
+
 func BorrarFoto(ctx context.Context, alm AlmacenDeImagenes, clave string) error {
 	if clave == "" {
 		return nil

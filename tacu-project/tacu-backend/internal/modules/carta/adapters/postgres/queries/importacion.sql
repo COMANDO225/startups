@@ -37,7 +37,8 @@ UPDATE importacion
  WHERE id = @id AND estado = 'lista';
 
 -- name: ObtenerImportacion :one
-SELECT i.*, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug
+SELECT i.*, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug,
+       r.portada_clave AS restaurante_portada
   FROM importacion i
   JOIN restaurante r ON r.id = i.restaurante_id
  WHERE i.id = $1;
@@ -233,7 +234,8 @@ SELECT EXISTS (
 -- Va por slug y salta a la importacion PUBLICADA, no a la ultima: seguir
 -- editando un borrador nuevo no puede cambiar lo que el cliente esta viendo.
 -- name: ImportacionPublicadaPorSlug :one
-SELECT i.id, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug
+SELECT i.id, r.nombre AS restaurante_nombre, r.slug AS restaurante_slug,
+       r.portada_clave AS restaurante_portada
   FROM restaurante r
   JOIN importacion i ON i.id = r.importacion_publicada_id
  WHERE r.slug = @slug;
@@ -263,3 +265,12 @@ SELECT categoria,
   FROM plato
  WHERE importacion_id = @importacion_id
  GROUP BY categoria;
+
+-- La foto del local que encabeza el catalogo. Se lee la anterior antes de pisarla
+-- para poder borrarla del almacen: sin eso, cada portada nueva deja la vieja
+-- pagando sitio en el bucket para siempre.
+-- name: PortadaDeRestaurante :one
+SELECT portada_clave FROM restaurante WHERE id = $1;
+
+-- name: GuardarPortada :exec
+UPDATE restaurante SET portada_clave = @portada_clave WHERE id = @restaurante_id;

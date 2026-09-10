@@ -65,6 +65,7 @@ type Handler struct {
 	negocio     Negocio
 	referencias GestorDeReferencias
 	paginas     GestorDePaginas
+	portada     GestorDePortada
 	reconocedor Reconocedor
 	publicador  Publicador
 	repo        Guardador
@@ -86,13 +87,14 @@ type Handler struct {
 
 func NuevoHandler(importar *app.Importar, lector Lector, encolador Encolador,
 	fotos GeneradorDeFotos, editar EditorDePlato, negocio Negocio, estilo Estilista,
-	referencias GestorDeReferencias, paginas GestorDePaginas, reconocedor Reconocedor,
+	referencias GestorDeReferencias, paginas GestorDePaginas, portada GestorDePortada,
+	reconocedor Reconocedor,
 	publicador Publicador, repo Guardador, url URLDeClave,
 	log *slog.Logger, sincrono bool, maxSubidaMB int, porFotoUSD float64) *Handler {
 	return &Handler{
 		importar: importar, lector: lector, encolador: encolador,
 		fotos: fotos, editar: editar, negocio: negocio, estilo: estilo, referencias: referencias,
-		paginas: paginas, reconocedor: reconocedor, publicador: publicador,
+		paginas: paginas, portada: portada, reconocedor: reconocedor, publicador: publicador,
 		repo: repo, url: url, log: log,
 		sincrono: sincrono, maxSubidaBytes: int64(maxSubidaMB) * 1024 * 1024,
 		porFotoUSD: porFotoUSD,
@@ -117,6 +119,7 @@ func (h *Handler) Montar(r fiber.Router) {
 	h.montarEstilo(r)
 	h.montarReferencias(r)
 	h.montarPaginas(r)
+	h.montarPortada(r)
 	h.montarReconocer(r)
 	h.montarPublicar(r)
 }

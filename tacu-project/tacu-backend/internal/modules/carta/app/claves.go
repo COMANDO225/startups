@@ -30,6 +30,14 @@ func ClaveDeFoto(restaurante, plato id.ID) string {
 	return fmt.Sprintf("%sfotos/%s/%s", prefijoDe(restaurante), plato, id.Nuevo())
 }
 
+// ClaveDePortada: la foto del local. Publica — encabeza el catalogo.
+//
+// Devuelve la BASE, sin extension: quien la guarda le anade la suya al
+// normalizar, porque el formato de salida lo decide el paquete imagen.
+func ClaveDePortada(restaurante id.ID) string {
+	return fmt.Sprintf("%sportada/%s", prefijoDe(restaurante), id.Nuevo())
+}
+
 // ClaveDeHoja: una hoja de la carta de papel. PRIVADA, y es la que mas importa
 // que lo sea: es el menu del negocio de otro, fotografiado por el.
 //

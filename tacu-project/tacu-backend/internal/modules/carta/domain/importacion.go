@@ -66,6 +66,11 @@ type Restaurante struct {
 
 	// Slug vacio = todavia no se publico. Es lo que va en la URL publica.
 	Slug string
+
+	// Portada es la CLAVE de la foto del local, la que encabeza el catalogo.
+	// Vacia = el catalogo sale con el nombre en texto, que es como salia antes
+	// de que esto existiera y sigue siendo una salida digna.
+	Portada string
 }
 
 // PuedePublicarse dice si la carta esta lista para salir a la calle.

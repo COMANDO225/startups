@@ -44,7 +44,7 @@ func TestPonerleNombreALosPreciosApagaLaMarcaYBajaElRecuento(t *testing.T) {
 	imp, _ := r.Obtener(ctx, impID)
 	var trioID = imp.Carta.Categorias[0].Platos[0].ID
 
-	plato, nuevas, err := r.EditarPlato(ctx, trioID, []string{"Personal", "Familiar"})
+	plato, nuevas, err := r.EditarPlato(ctx, trioID, etiquetas("Personal", "Familiar"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestUnaSolaEtiquetaNoAlcanza(t *testing.T) {
 	}
 	imp, _ := r.Obtener(ctx, impID)
 
-	plato, marcas, err := r.EditarPlato(ctx, imp.Carta.Platos()[0].ID, []string{"Personal"})
+	plato, marcas, err := r.EditarPlato(ctx, imp.Carta.Platos()[0].ID, etiquetas("Personal"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,4 +101,14 @@ func TestUnaSolaEtiquetaNoAlcanza(t *testing.T) {
 	if marcas.Revisar != 1 {
 		t.Errorf("el recuento deberia seguir en 1, dio %d", marcas.Revisar)
 	}
+}
+
+// etiquetas arma correcciones que solo tocan el nombre: el importe se queda como
+// vino de la carta.
+func etiquetas(nombres ...string) []domain.CorreccionDePrecio {
+	fuera := make([]domain.CorreccionDePrecio, 0, len(nombres))
+	for _, n := range nombres {
+		fuera = append(fuera, domain.CorreccionDePrecio{Etiqueta: n})
+	}
+	return fuera
 }

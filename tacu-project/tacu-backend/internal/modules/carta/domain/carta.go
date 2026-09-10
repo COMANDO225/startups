@@ -73,6 +73,11 @@ const (
 	Impreso    Procedencia = "impreso"
 	Manuscrito Procedencia = "manuscrito"
 	SinPrecio  Procedencia = "ninguno"
+
+	// DelDueno: lo corrigio el a mano, mirando su carta. Es la unica
+	// procedencia que no se cruza contra nada, porque no hay contra que
+	// cruzarla: el dueno ES el testigo.
+	DelDueno Procedencia = "dueno"
 )
 
 // Precio es UNA de las formas de pedir un plato.
@@ -104,6 +109,15 @@ type Precio struct {
 	// a ver. Sirve para mostrarle al dueno "antes decia X, ahora Y" en la
 	// pantalla de confirmacion.
 	AnuladoTexto string `json:"anulado_texto,omitempty"`
+}
+
+// CorreccionDePrecio es lo que el dueno arregla a mano de UNA opcion de precio.
+//
+// Centimos es un puntero porque nil y 0 dicen cosas distintas: nil es "no toco
+// el importe, solo la etiqueta" y 0 seria un plato que vale cero.
+type CorreccionDePrecio struct {
+	Etiqueta string
+	Centimos *dinero.Centimos
 }
 
 // Plato es un item de la carta.
@@ -328,6 +342,17 @@ func verificarPlato(p Plato) MotivoRevision {
 }
 
 func verificarPrecio(pr Precio) MotivoRevision {
+	// Lo que puso el dueno no se discute. El cruce de testigos existe para
+	// pillar al modelo corrigiendo en silencio lo que lee; cuando el numero lo
+	// escribio el dueno mirando su carta, seguir comparandolo contra el texto
+	// impreso lo dejaria marcado para siempre justo despues de arreglarlo.
+	//
+	// El texto impreso NO se toca al corregir: se sigue enseniando como "en la
+	// carta dice X", que es lo que deja ver que la diferencia es deliberada.
+	if pr.Procedencia == DelDueno {
+		return SinRevision
+	}
+
 	if strings.TrimSpace(pr.Texto) == "" {
 		// Sin texto impreso no hay contra que contrastar. Si ademas el modelo no
 		// dio numero, el plato simplemente no tiene precio en la carta (pasa:

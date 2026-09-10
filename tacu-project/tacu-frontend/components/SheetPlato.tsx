@@ -15,7 +15,7 @@ import { Panel } from "@/components/Panel";
 import { Trash2 } from "lucide-react";
 import {
   ajustarFotoDePlato,
-  editarEtiquetas,
+  editarPrecios,
   generarFotos,
   quitarReferenciaDePlato,
   subirReferenciaDePlato,
@@ -57,10 +57,17 @@ export function SheetPlato({
   const [etiquetas, setEtiquetas] = useState(() =>
     plato.precios.map((p) => p.etiqueta ?? ""),
   );
+
+  // Los importes nacen VACIOS, no con el precio dentro: vacio significa "no lo
+  // toco", y arrancar con el numero puesto haria que abrir el cuadro y guardar
+  // marcara el precio como corregido por el dueno sin que el haya tocado nada.
+  // El de la carta se ensenia al lado, que es contra lo que se compara.
+  const [importes, setImportes] = useState(() => plato.precios.map(() => ""));
   const [ajuste, setAjuste] = useState(plato.foto_ajuste ?? "");
 
   const guardarDatos = useMutation({
-    mutationFn: () => editarEtiquetas(idImportacion, plato.id, etiquetas),
+    mutationFn: () =>
+      editarPrecios(idImportacion, plato.id, etiquetas, importes),
     onSuccess: async () => {
       await refrescarCarta();
       onAbierto(false);
@@ -110,14 +117,7 @@ export function SheetPlato({
       )}
 
       {plato.precios.map((precio, i) => (
-        <TextField
-          key={i}
-          isDisabled={!variasOpciones}
-          value={etiquetas[i]}
-          onChange={(v) =>
-            setEtiquetas((p) => p.map((x, j) => (j === i ? v : x)))
-          }
-        >
+        <div key={i} className="flex flex-col gap-2">
           <Label>
             {precio.soles}
             <span className="ms-2 text-xs font-normal text-muted">
@@ -125,15 +125,46 @@ export function SheetPlato({
               {precio.manuscrito && " · escrito a mano"}
             </span>
           </Label>
-          <Input maxLength={40} placeholder="De que es? Ej: Personal" />
-        </TextField>
+
+          <div className="flex gap-2">
+            {/* El nombre solo tiene sentido con varias opciones: con una sola no
+                hay de que distinguirla. */}
+            {variasOpciones && (
+              <TextField
+                aria-label={`Nombre del precio ${precio.soles}`}
+                className="flex-1"
+                value={etiquetas[i]}
+                onChange={(v) =>
+                  setEtiquetas((p) => p.map((x, j) => (j === i ? v : x)))
+                }
+              >
+                <Input maxLength={40} placeholder="De que es? Ej: Personal" />
+              </TextField>
+            )}
+
+            <TextField
+              aria-label={`Corregir el precio ${precio.soles}`}
+              className={variasOpciones ? "w-[116px]" : "w-[136px]"}
+              value={importes[i]}
+              onChange={(v) =>
+                setImportes((p) => p.map((x, j) => (j === i ? v : x)))
+              }
+            >
+              <Input
+                inputMode="decimal"
+                maxLength={12}
+                placeholder={precio.soles.replace("S/ ", "S/ ")}
+              />
+            </TextField>
+          </div>
+        </div>
       ))}
 
-      {!variasOpciones && (
-        <p className="text-sm text-muted">
-          Un solo precio: no hace falta ponerle nombre.
-        </p>
-      )}
+      <Description>
+        {variasOpciones
+          ? "Ponle nombre a cada precio. Si alguno se leyo mal, escribe el correcto encima."
+          : "Si el precio se leyo mal, escribe el correcto. Lo que dice tu carta se queda como referencia."}
+      </Description>
 
       {guardarDatos.error && (
         <p className="text-sm text-bloquea">{guardarDatos.error.message}</p>
@@ -144,17 +175,13 @@ export function SheetPlato({
   // Con un solo precio no hay etiqueta que poner, asi que no hay nada que
   // guardar: antes esto era un boton "Guardar" permanentemente deshabilitado,
   // que es prometer una accion que no existe.
-  const accionDeDatos = variasOpciones ? (
+  const accionDeDatos = (
     <Boton
       ancho
       disabled={guardarDatos.isPending}
       onClick={() => guardarDatos.mutate()}
     >
       {guardarDatos.isPending ? "Guardando…" : "Guardar"}
-    </Boton>
-  ) : (
-    <Boton ancho onClick={() => onAbierto(false)}>
-      Listo
     </Boton>
   );
 

@@ -237,7 +237,7 @@ func (f *fotosFalsas) AjustarFoto(context.Context, id.ID, string) error         
 // platos.
 type editorFalso struct{}
 
-func (editorFalso) Etiquetas(context.Context, id.ID, []string) (domain.Plato, domain.Marcas, error) {
+func (editorFalso) Precios(context.Context, id.ID, []string, []string) (domain.Plato, domain.Marcas, error) {
 	return domain.Plato{}, domain.Marcas{}, nil
 }
 

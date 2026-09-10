@@ -14,7 +14,8 @@ import (
 type EditorDePlato interface {
 	// Etiquetas le pone nombre a los precios de un plato con varias opciones.
 	// Devuelve el plato ya reverificado y el recuento nuevo de la carta.
-	Etiquetas(ctx context.Context, platoID id.ID, etiquetas []string) (domain.Plato, domain.Marcas, error)
+	Precios(ctx context.Context, platoID id.ID,
+		etiquetas, importes []string) (domain.Plato, domain.Marcas, error)
 
 	// Quitar borra un plato de la carta. Es la confirmacion del dueno sobre un
 	// plato que la lectura marco como ausente, o simplemente uno que no quiere.
@@ -39,10 +40,11 @@ type PlatoEditadoDTO struct {
 
 // editarPlato aplica las correcciones del dueno sobre un plato.
 //
-// Hoy solo las etiquetas de los precios, que es lo unico que el dueno puede
-// arreglar tecleando: es lo que desbloquea publicar cuando la carta traia dos
-// montos en una fila sin decir de que era cada uno. Nombre, descripcion y
-// precios entran por aqui el dia que se ofrezcan; el endpoint ya es el sitio.
+// Las etiquetas de los precios y su IMPORTE. La etiqueta desbloquea publicar
+// cuando la carta traia dos montos sin decir de que era cada uno; el importe
+// existe porque el modelo se equivoca leyendo numeros y el cruce de testigos
+// sabe marcarlo pero no arreglarlo. Nombre y descripcion entran por aqui el dia
+// que se ofrezcan; el endpoint ya es el sitio.
 func (h *Handler) editarPlato(c fiber.Ctx) error {
 	platoID, ok := parsearID(c.Params("id"))
 	if !ok {
@@ -50,9 +52,15 @@ func (h *Handler) editarPlato(c fiber.Ctx) error {
 	}
 
 	var cuerpo struct {
-		// Etiquetas van por POSICION, igual que se pintan. Es lo mismo que hace
-		// la pantalla y evita inventarle un id a cada precio, que hoy no tiene.
+		// Las dos listas van por POSICION, igual que se pintan. Es lo mismo que
+		// hace la pantalla y evita inventarle un id a cada precio, que hoy no
+		// tiene.
 		Etiquetas []string `json:"etiquetas"`
+
+		// Importes en TEXTO, no en centimos: lo parsea el mismo dinero.Parsear
+		// que cruza los precios de la carta, asi que "45", "45.50" y "S/ 45"
+		// valen igual aqui y alli. Una cadena vacia deja el importe como estaba.
+		Importes []string `json:"importes"`
 	}
 	if err := c.Bind().JSON(&cuerpo); err != nil {
 		return problema(c, http.StatusBadRequest, "el cuerpo no es un JSON valido", "")
@@ -66,7 +74,7 @@ func (h *Handler) editarPlato(c fiber.Ctx) error {
 		return traducirError(c, err)
 	}
 
-	plato, marcas, err := h.editar.Etiquetas(c.Context(), platoID, cuerpo.Etiquetas)
+	plato, marcas, err := h.editar.Precios(c.Context(), platoID, cuerpo.Etiquetas, cuerpo.Importes)
 	if err != nil {
 		return traducirError(c, err)
 	}

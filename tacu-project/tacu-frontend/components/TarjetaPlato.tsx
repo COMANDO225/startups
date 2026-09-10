@@ -168,7 +168,13 @@ export function TarjetaPlato({
         )}
 
         {enFotos && (
-          <div className="mt-[11px]">
+          // mt-auto: los botones se van al FONDO de la tarjeta. En una fila del
+          // grid todas se estiran a la mas alta, asi que la de un plato con
+          // nombre corto y un solo precio dejaba los suyos a media altura y un
+          // hueco muerto debajo. Con esto quedan alineados de tarjeta a tarjeta,
+          // que es donde el ojo los busca. El pt mantiene la separacion minima
+          // cuando la tarjeta ya viene llena.
+          <div className="mt-auto pt-[11px]">
             <BotonesDeFoto
               foto={foto}
               idImportacion={idImportacion}

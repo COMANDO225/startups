@@ -130,7 +130,54 @@ export function escucharCarta(avisar: () => void) {
 
 export function obtenerToken(id: string): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(clave(id));
+  // El de la URL PRIMERO, y no como respaldo del guardado: quien llega con un
+  // enlace de recuperacion trae la llave en la mano, y el enlace existe
+  // exactamente para cuando la guardada ya no vale. Al reves —guardado primero—
+  // un token viejo se quedaba delante del bueno para siempre y el enlace no
+  // servia de nada. Paso de verdad.
+  return deLaURL(id) ?? localStorage.getItem(clave(id));
+}
+
+/**
+ * EL ENLACE DE RECUPERACION: /i/{id}?t={token}.
+ *
+ * Sin registro y sin contrasena el token es lo unico que abre una carta, vive en
+ * UN navegador y viaja una sola vez. Perderlo —cambiar de telefono, limpiar el
+ * navegador, entrar desde otro equipo— dejaba la carta inalcanzable para
+ * siempre, con sus fotos ya pagadas dentro, y la unica salida era escribir en
+ * localStorage desde la consola. Un dueno de restaurante no tiene consola.
+ *
+ * Se resuelve AQUI y no en un efecto de la pantalla porque el token hace falta
+ * ANTES de la primera peticion: el marco del editor consulta la carta en su
+ * primer render, y un efecto llega tarde —salia el cartel de "este borrador no
+ * se abre en este telefono" y ahi se acababa el intento—.
+ *
+ * Se guarda al leerlo, asi que la siguiente visita ya no depende del enlace.
+ *
+ * Contrapartida asumida: el token viaja en la URL y una URL se comparte sin
+ * pensarlo. A cambio, hoy la alternativa es perder la carta entera. El marco
+ * limpia la barra de direcciones en cuanto entra.
+ */
+// La query de la PRIMERA carga, copiada al importar el modulo.
+//
+// El marco limpia la barra en cuanto entra —el token no tiene por que quedarse
+// en el historial—, y ese limpiado corria ANTES que la primera peticion: se
+// llevaba el token por delante y volvia a salir el cartel de "no se abre en este
+// telefono". Con la copia no hay carrera que perder.
+const entrada =
+  typeof window === "undefined"
+    ? null
+    : { ruta: window.location.pathname, busqueda: window.location.search };
+
+function deLaURL(id: string): string | null {
+  // La ruta tiene que ser la de ESTA carta: sin esto, entrar con el enlace de
+  // una y navegar despues a otra le habria guardado a la segunda el token de la
+  // primera, y ahi la ruptura no se ve hasta mucho despues.
+  if (!entrada || !entrada.ruta.includes(id)) return null;
+  const t = new URLSearchParams(entrada.busqueda).get("t");
+  if (!t) return null;
+  guardarToken(id, t);
+  return t;
 }
 
 // --- llamadas ---
@@ -324,16 +371,25 @@ export function ajustarFotoDePlato(
 
 // --- edicion de platos ---
 
-/** Le pone nombre a los precios de un plato. Es lo que desbloquea publicar. */
-export function editarEtiquetas(
+/**
+ * Corrige a mano las opciones de precio de un plato: el nombre de cada una y su
+ * importe.
+ *
+ * Las dos listas van por POSICION, como se pintan. Un importe en blanco deja el
+ * que ya estaba; se manda como TEXTO porque lo parsea el backend con el mismo
+ * lector que cruza los precios de la carta, asi que "45", "45.50" y "S/ 45"
+ * valen igual.
+ */
+export function editarPrecios(
   idImportacion: string,
   idPlato: string,
   etiquetas: string[],
+  importes: string[],
 ): Promise<PlatoEditado> {
   return pedir(`/v1/platos/${idPlato}`, {
     method: "PATCH",
     token: conToken(idImportacion),
-    body: JSON.stringify({ etiquetas }),
+    body: JSON.stringify({ etiquetas, importes }),
     headers: { "Content-Type": "application/json" },
   });
 }

@@ -16,12 +16,12 @@ import { useImportacion } from "@/lib/hooks";
 export default function ElPasoQueToca() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: importacion, isPending } = useImportacion(id);
+  const { data: importacion, isPending, isError } = useImportacion(id);
 
   useEffect(() => {
-    if (isPending) return;
+    if (isPending || isError) return;
     router.replace(`/i/${id}/${alcance(importacion)}`);
-  }, [id, importacion, isPending, router]);
+  }, [id, importacion, isPending, isError, router]);
 
   return <CatalogoEsqueleto />;
 }

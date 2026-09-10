@@ -11,7 +11,7 @@ import { EsqueletoDePaso } from "@/components/EsqueletoDePaso";
 import { Lateral } from "@/components/Lateral";
 import { Boton } from "@/components/ui/Boton";
 import { Ficha } from "@/components/ui/Ficha";
-import { FalloApi } from "@/lib/api";
+import { FalloApi, recordarRestaurante } from "@/lib/api";
 import { alcance, DONDE, pasoValido, puedeIr, secciones } from "@/lib/flujo";
 import { useFotos, useImportacion } from "@/lib/hooks";
 
@@ -38,6 +38,22 @@ export default function MarcoDelEditor({
   const paso = pasoValido(segmento);
 
   const { data: importacion, error, isPending } = useImportacion(id);
+
+  // El token ya lo recogio obtenerToken; aqui solo se quita de la barra, para
+  // que no quede en el historial ni en lo que el dueno copie luego para ensenar
+  // su carta. replaceState y no router.replace: no hace falta navegar.
+  useEffect(() => {
+    if (window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  // Si la carta se puede leer, se recuerda. Cubre a quien llega con el enlace de
+  // recuperacion y a quien tiene el token pero perdio el indice: la pantalla de
+  // inicio le ofrecia crear una carta nueva teniendo la suya delante.
+  useEffect(() => {
+    if (importacion) recordarRestaurante(id, importacion.restaurante.nombre);
+  }, [id, importacion]);
   const { data: fotos } = useFotos(id);
 
   // El guard. En un efecto y no durante el render: redirigir mientras se pinta

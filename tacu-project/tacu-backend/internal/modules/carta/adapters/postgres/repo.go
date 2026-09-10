@@ -784,7 +784,8 @@ func (r *Repo) MarcarFotoConEstado(ctx context.Context, platoID id.ID, estado do
 // Aplica las etiquetas, reverifica el plato y recuenta las marcas, en UNA
 // transaccion: la barra de publicar lee ese recuento, y si el plato se limpiara
 // sin recontarlo seguiria bloqueada para siempre.
-func (r *Repo) EditarPlato(ctx context.Context, platoID id.ID, etiquetas []string) (domain.Plato, domain.Marcas, error) {
+func (r *Repo) EditarPlato(ctx context.Context, platoID id.ID,
+	correcciones []domain.CorreccionDePrecio) (domain.Plato, domain.Marcas, error) {
 	var plato domain.Plato
 	var marcas domain.Marcas
 
@@ -807,8 +808,17 @@ func (r *Repo) EditarPlato(ctx context.Context, platoID id.ID, etiquetas []strin
 		// Por POSICION, como los pinta la pantalla. Una lista mas corta deja el
 		// resto como estaba.
 		for i := range precios {
-			if i < len(etiquetas) {
-				precios[i].Etiqueta = strings.TrimSpace(etiquetas[i])
+			if i >= len(correcciones) {
+				continue
+			}
+			precios[i].Etiqueta = strings.TrimSpace(correcciones[i].Etiqueta)
+
+			// El texto impreso se QUEDA: es la prueba de lo que decia la carta, y
+			// la pantalla lo sigue enseniando como "en la carta dice X". Lo que
+			// cambia es el numero que se publica y de donde dice que viene.
+			if c := correcciones[i].Centimos; c != nil {
+				precios[i].Centimos = *c
+				precios[i].Procedencia = domain.DelDueno
 			}
 		}
 

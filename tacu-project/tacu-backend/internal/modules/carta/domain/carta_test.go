@@ -256,3 +256,54 @@ func TestTodoMotivoTieneNivel(t *testing.T) {
 		}
 	}
 }
+
+// Un precio corregido por el dueno NO se vuelve a cruzar contra el texto
+// impreso. Sin esto, arreglar a mano el precio que el modelo leyo mal dejaba el
+// plato marcado igual —el texto sigue diciendo lo que decia la carta— y publicar
+// seguia bloqueado justo despues de arreglarlo.
+func TestElPrecioDelDuenoNoSeDiscute(t *testing.T) {
+	casos := []struct {
+		nombre string
+		precio Precio
+		quiero MotivoRevision
+	}{
+		{
+			"el modelo leyo 45 donde dice 48",
+			Precio{Texto: "S/ 48", Centimos: 4500, Procedencia: Impreso},
+			PrecioDiscordante,
+		},
+		{
+			"el dueno lo corrigio a 48",
+			Precio{Texto: "S/ 48", Centimos: 4800, Procedencia: DelDueno},
+			SinRevision,
+		},
+		{
+			// El caso que importa: el dueno pone un numero que NO coincide con lo
+			// impreso, porque la carta tiene un sticker encima o el precio subio.
+			"el dueno pone otro numero del que dice la carta",
+			Precio{Texto: "S/ 48", Centimos: 5500, Procedencia: DelDueno},
+			SinRevision,
+		},
+		{
+			"un texto ilegible que el dueno resolvio",
+			Precio{Texto: "12 a 15", Centimos: 1500, Procedencia: DelDueno},
+			SinRevision,
+		},
+		{
+			"sin texto, pero el dueno lo puso",
+			Precio{Texto: "", Centimos: 3000, Procedencia: DelDueno},
+			SinRevision,
+		},
+	}
+
+	for _, c := range casos {
+		t.Run(c.nombre, func(t *testing.T) {
+			p := Plato{Nombre: "Ceviche", Precios: []Precio{c.precio}}
+			carta := Carta{Categorias: []Categoria{{Nombre: "Ceviches", Platos: []Plato{p}}}}
+			carta.Verificar()
+			if got := carta.Categorias[0].Platos[0].Revisar; got != c.quiero {
+				t.Errorf("revisar = %q, esperaba %q", got, c.quiero)
+			}
+		})
+	}
+}

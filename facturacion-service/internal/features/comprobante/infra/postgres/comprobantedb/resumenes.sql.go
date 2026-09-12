@@ -221,6 +221,7 @@ UPDATE "comprobantes"
        "mensaje_sunat" = $3::text,
        "updated_at"    = now()
  WHERE "resumen_id" = $4::text
+   AND "estado" NOT IN ('anulado', 'rechazado')
 `
 
 type ResolverComprobantesDeResumenParams struct {
@@ -231,6 +232,12 @@ type ResolverComprobantesDeResumenParams struct {
 }
 
 // El CDR del resumen resuelve de una vez todas las boletas que iban dentro.
+//
+// El filtro por estado NO es defensivo, es obligatorio: una boleta anulada se
+// reasigna al RC de baja, y sin este WHERE el CDR de ESE RC la devolvia a
+// 'aceptado'. Nuestro registro terminaba contradiciendo a SUNAT, que ya la tenia
+// dada de baja. Ningun UPDATE masivo de estado puede pisar un estado terminal
+// que esta operacion no dicto.
 func (q *Queries) ResolverComprobantesDeResumen(ctx context.Context, arg ResolverComprobantesDeResumenParams) error {
 	_, err := q.db.Exec(ctx, resolverComprobantesDeResumen,
 		arg.Estado,

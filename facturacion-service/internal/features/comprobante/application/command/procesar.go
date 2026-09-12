@@ -49,8 +49,14 @@ func (uc *Procesar) Execute(ctx context.Context, comprobanteID string) error {
 		return err
 	}
 
+	// El motor solo devuelve ticket al enviar un resumen; un comprobante
+	// individual nunca deberia traerlo. Si llega, es una anomalia del motor y
+	// NADIE consulta ese ticket: no hay worker para comprobantes en
+	// 'ticket_pendiente' ni el barrido cubre ese estado. Marcarlo como error lo
+	// deja retomable y visible en /atencion, en vez de dejarlo en un estado sin
+	// salida.
 	if res.Ticket != "" {
-		c.MarcarTicket(res.Ticket, res.XML)
+		c.MarcarError("el motor devolvio ticket para un comprobante individual: " + res.Ticket)
 	} else {
 		c.Resolver(res.Codigo, res.Mensaje, res.XML, res.CDR)
 	}

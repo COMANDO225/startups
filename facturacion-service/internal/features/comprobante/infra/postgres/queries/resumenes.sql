@@ -72,12 +72,19 @@ UPDATE "comprobantes"
 
 -- name: ResolverComprobantesDeResumen :exec
 -- El CDR del resumen resuelve de una vez todas las boletas que iban dentro.
+--
+-- El filtro por estado NO es defensivo, es obligatorio: una boleta anulada se
+-- reasigna al RC de baja, y sin este WHERE el CDR de ESE RC la devolvia a
+-- 'aceptado'. Nuestro registro terminaba contradiciendo a SUNAT, que ya la tenia
+-- dada de baja. Ningun UPDATE masivo de estado puede pisar un estado terminal
+-- que esta operacion no dicto.
 UPDATE "comprobantes"
    SET "estado"        = @estado::text,
        "codigo_sunat"  = @codigo_sunat::text,
        "mensaje_sunat" = @mensaje_sunat::text,
        "updated_at"    = now()
- WHERE "resumen_id" = @resumen_id::text;
+ WHERE "resumen_id" = @resumen_id::text
+   AND "estado" NOT IN ('anulado', 'rechazado');
 
 -- name: ComprobantesDeResumen :many
 SELECT * FROM "comprobantes"

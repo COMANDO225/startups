@@ -3,6 +3,8 @@ package postgres_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -285,5 +287,98 @@ func TestRescateTrasVentanaVencida(t *testing.T) {
 
 	if _, err := repo.Tomar(ctx, c.ID()); err != nil {
 		t.Fatalf("nadie pudo rescatar el comprobante abandonado: %v", err)
+	}
+}
+
+// El bug: ResolverComprobantesDeResumen pisaba el estado de TODOS los
+// comprobantes del resumen. Al anular una boleta se la reasigna al RC de baja, y
+// el CDR de ESE RC la devolvia a 'aceptado' — nuestro registro terminaba
+// contradiciendo a SUNAT, que ya la tenia dada de baja.
+func TestResolverResumenNoRevivelosAnulados(t *testing.T) {
+	pool := nuevoPool(t)
+	repo := postgres.NewRepo(pool)
+	ctx := context.Background()
+
+	if _, err := pool.Exec(ctx,
+		`INSERT INTO "series" (tenant_id, tipo_doc, serie, correlativo) VALUES ($1, '03', 'B001', 0)`,
+		tenantDePrueba); err != nil {
+		t.Fatal(err)
+	}
+
+	resumenID := string(ulid.New())
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO "resumenes" (id, tenant_id, tipo, fecha_ref, correlativo, estado)
+		VALUES ($1, $2, 'RC', current_date, 1, 'ticket_pendiente')`,
+		resumenID, tenantDePrueba); err != nil {
+		t.Fatal(err)
+	}
+
+	// Dos boletas en el mismo resumen: una viajando normal, otra ya anulada.
+	crear := func(correlativo int, estado string) string {
+		id := string(ulid.New())
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO "comprobantes" (id, tenant_id, idempotency_key, tipo_doc, serie,
+			                            correlativo, estado, payload, moneda, importe_total,
+			                            fecha_emision, resumen_id)
+			VALUES ($1, $2, $3, '03', 'B001', $4, $5, '{}', 'PEN', 25.00, current_date, $6)`,
+			id, tenantDePrueba, "venta-"+id, correlativo, estado, resumenID); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+
+	normal := crear(1, "pendiente_resumen")
+	anulada := crear(2, "anulado")
+
+	if err := repo.ResolverComprobantesDeResumen(ctx, resumenID,
+		domain.EstadoAceptado, "0", "aceptada"); err != nil {
+		t.Fatalf("resolver: %v", err)
+	}
+
+	estadoDe := func(id string) string {
+		var e string
+		if err := pool.QueryRow(ctx, `SELECT estado FROM comprobantes WHERE id = $1`, id).Scan(&e); err != nil {
+			t.Fatal(err)
+		}
+		return e
+	}
+
+	if got := estadoDe(normal); got != "aceptado" {
+		t.Fatalf("la boleta que viajaba en el resumen quedo en %q, esperaba aceptado", got)
+	}
+	if got := estadoDe(anulada); got != "anulado" {
+		t.Fatalf("la boleta ANULADA volvio a %q: nuestro registro contradice a SUNAT", got)
+	}
+}
+
+// El bug: tx.Rollback(ctx) con el contexto ya cancelado no llega al servidor.
+// pgx devuelve "context already done" y RunInTx envuelve el error del caso de uso
+// en ruido de infraestructura, ademas de dejar la transaccion sin deshacer
+// explicitamente.
+//
+// OJO con la asercion: errors.Is(err, fallo) es cierto EN AMBOS CASOS porque el
+// wrap usa %w. Lo que distingue al bug es el mensaje, no la identidad del error.
+func TestRollbackFuncionaConContextoCancelado(t *testing.T) {
+	pool := nuevoPool(t)
+	tx := transaction.NewTransactor(pool)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	fallo := errors.New("el caso de uso fallo")
+
+	err := tx.RunInTx(ctx, func(txCtx context.Context) error {
+		// Se cancela DENTRO de la transaccion, como cuando el cliente HTTP corta
+		// la conexion o River cancela el job a mitad.
+		cancel()
+		return fallo
+	})
+
+	if !errors.Is(err, fallo) {
+		t.Fatalf("se perdio el error original: %v", err)
+	}
+	if strings.Contains(err.Error(), "rollback failed") {
+		t.Fatalf("el ROLLBACK no llego al servidor: %v", err)
+	}
+	if err.Error() != fallo.Error() {
+		t.Fatalf("el error del caso de uso llego contaminado: %q", err.Error())
 	}
 }

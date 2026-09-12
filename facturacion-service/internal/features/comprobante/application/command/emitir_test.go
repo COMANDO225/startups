@@ -349,10 +349,17 @@ type motorFake struct {
 	// ticketRespuesta permite simular lo que SUNAT contesta al consultar el
 	// ticket: pendiente, aceptado o un fallo de transporte.
 	ticketRespuesta *domain.ResultadoEmision
+
+	// ticketEnEmitir simula la anomalia de que el motor devuelva ticket para un
+	// comprobante individual, cosa que solo deberia pasar con resumenes.
+	ticketEnEmitir string
 }
 
 func (m *motorFake) Emitir(context.Context, *domain.Tenant, []byte, domain.TipoDoc, string, int64, time.Time) (*domain.ResultadoEmision, error) {
 	m.llamadas++
+	if m.ticketEnEmitir != "" {
+		return &domain.ResultadoEmision{Ticket: m.ticketEnEmitir, XML: []byte("<xml/>")}, nil
+	}
 	return &domain.ResultadoEmision{Codigo: "0", Mensaje: "aceptada", XML: []byte("<xml/>"), CDR: []byte("cdr")}, nil
 }
 func (m *motorFake) ConsultarTicket(context.Context, *domain.Tenant, string) (*domain.ResultadoEmision, error) {

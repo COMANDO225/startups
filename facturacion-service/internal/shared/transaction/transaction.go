@@ -43,7 +43,11 @@ func (t *PgxTransactor) RunInTx(ctx context.Context, fn func(ctx context.Context
 	txCtx := context.WithValue(ctx, ctxKey{}, tx)
 
 	if err := fn(txCtx); err != nil {
-		if rbErr := tx.Rollback(ctx); rbErr != nil {
+		// El rollback NO puede usar ctx: si el cliente corto la conexion o el job
+		// se cancelo, pgx devuelve "context already done" y el ROLLBACK nunca sale
+		// al servidor. La conexion vuelve al pool en 'idle in transaction
+		// (aborted)' y se queda ahi ocupando un slot con locks tomados.
+		if rbErr := tx.Rollback(context.WithoutCancel(ctx)); rbErr != nil {
 			return fmt.Errorf("rollback failed: %v (original: %w)", rbErr, err)
 		}
 		return err
